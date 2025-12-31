@@ -1,6 +1,6 @@
 //
 //  AppState.swift
-//  ScanFlow
+//  PhotoFlow
 //
 //  Created by Claude on 2024-12-30.
 //
@@ -27,12 +27,8 @@ enum NavigationSection: String, CaseIterable, Identifiable {
 }
 
 @Observable
-@MainActor
 class AppState {
     var scannerManager = ScannerManager()
-    #if os(macOS)
-    var imageProcessor = ImageProcessor()
-    #endif
     var scanQueue: [QueuedScan] = []
     var scannedFiles: [ScannedFile] = []
     var presets: [ScanPreset] = ScanPreset.defaults
@@ -42,14 +38,37 @@ class AppState {
     var showingAlert: Bool = false
     var alertMessage: String = ""
 
-    // Settings
-    @ObservationIgnored @AppStorage("defaultResolution") var defaultResolution: Int = 300
-    @ObservationIgnored @AppStorage("defaultFormat") var defaultFormat: String = "jpeg"
-    @ObservationIgnored @AppStorage("scanDestination") var scanDestination: String = "~/Pictures/Scans"
-    @ObservationIgnored @AppStorage("autoOpenDestination") var autoOpenDestination: Bool = true
-    @ObservationIgnored @AppStorage("organizationPattern") var organizationPattern: String = "date"
-    @ObservationIgnored @AppStorage("fileNamingTemplate") var fileNamingTemplate: String = "yyyy-MM-dd_###"
-    @ObservationIgnored @AppStorage("useMockScanner") var useMockScanner: Bool = false
+    // Settings - use separate ObservableObject to avoid @Observable/@AppStorage conflict
+    @ObservationIgnored private var _settings = SettingsStore()
+    
+    var defaultResolution: Int {
+        get { _settings.defaultResolution }
+        set { _settings.defaultResolution = newValue }
+    }
+    var defaultFormat: String {
+        get { _settings.defaultFormat }
+        set { _settings.defaultFormat = newValue }
+    }
+    var scanDestination: String {
+        get { _settings.scanDestination }
+        set { _settings.scanDestination = newValue }
+    }
+    var autoOpenDestination: Bool {
+        get { _settings.autoOpenDestination }
+        set { _settings.autoOpenDestination = newValue }
+    }
+    var organizationPattern: String {
+        get { _settings.organizationPattern }
+        set { _settings.organizationPattern = newValue }
+    }
+    var fileNamingTemplate: String {
+        get { _settings.fileNamingTemplate }
+        set { _settings.fileNamingTemplate = newValue }
+    }
+    var useMockScanner: Bool {
+        get { _settings.useMockScanner }
+        set { _settings.useMockScanner = newValue }
+    }
 
     init() {
         // Initialize with user defaults if needed
@@ -116,20 +135,6 @@ class AppState {
 
     #if os(macOS)
     private func saveScannedImage(_ result: ScanResult, preset: ScanPreset) async throws -> ScannedFile {
-        var processedImage = result.image
-
-        // Apply image processing based on preset settings
-        if preset.autoEnhance || preset.restoreColor || preset.deskew ||
-           preset.autoRotate || preset.removeRedEye {
-            processedImage = try await imageProcessor.process(processedImage, with: preset)
-        }
-
-        // Check for blank page detection (if needed)
-        if await imageProcessor.isBlankPage(processedImage) {
-            // Optionally skip blank pages or warn user
-            // For now, we'll continue with saving
-        }
-
         // Expand tilde in path
         let destPath = NSString(string: preset.destination).expandingTildeInPath
         let destURL = URL(fileURLWithPath: destPath)
@@ -137,12 +142,12 @@ class AppState {
         // Create directory if needed
         try? FileManager.default.createDirectory(at: destURL, withIntermediateDirectories: true)
 
-        // Generate filename with advanced pattern support
-        let filename = generateFilename(format: preset.format, preset: preset)
+        // Generate filename
+        let filename = generateFilename(format: preset.format)
         let fileURL = destURL.appendingPathComponent(filename)
 
         // Save image
-        guard let tiffData = processedImage.tiffRepresentation,
+        guard let tiffData = result.image.tiffRepresentation,
               let bitmapImage = NSBitmapImageRep(data: tiffData) else {
             throw ScannerError.scanFailed
         }
@@ -163,9 +168,6 @@ class AppState {
 
         try data.write(to: fileURL)
 
-        // Detect paper size for metadata
-        let paperSize = await imageProcessor.detectPaperSize(processedImage)
-
         return ScannedFile(
             filename: filename,
             fileURL: fileURL,
@@ -178,49 +180,21 @@ class AppState {
     }
     #endif
 
-    private func generateFilename(format: ScanFormat, preset: ScanPreset? = nil) -> String {
-        let now = Date()
-
-        // Use custom template if provided in settings
-        var template = fileNamingTemplate
-
-        // Support for various date/time patterns
+    private func generateFilename(format: ScanFormat) -> String {
         let dateFormatter = DateFormatter()
-
-        // Replace template patterns
-        template = template.replacingOccurrences(of: "yyyy", with: {
-            dateFormatter.dateFormat = "yyyy"
-            return dateFormatter.string(from: now)
-        }())
-        template = template.replacingOccurrences(of: "MM", with: {
-            dateFormatter.dateFormat = "MM"
-            return dateFormatter.string(from: now)
-        }())
-        template = template.replacingOccurrences(of: "dd", with: {
-            dateFormatter.dateFormat = "dd"
-            return dateFormatter.string(from: now)
-        }())
-        template = template.replacingOccurrences(of: "HH", with: {
-            dateFormatter.dateFormat = "HH"
-            return dateFormatter.string(from: now)
-        }())
-        template = template.replacingOccurrences(of: "mm", with: {
-            dateFormatter.dateFormat = "mm"
-            return dateFormatter.string(from: now)
-        }())
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let dateString = dateFormatter.string(from: Date())
 
         // Find next available number
-        let destPath = NSString(string: preset?.destination ?? scanDestination).expandingTildeInPath
-        let destURL = URL(fileURLWithPath: destPath)
-
         var counter = 1
-        var filename = template.replacingOccurrences(of: "###", with: String(format: "%03d", counter))
-        filename += ".\(format.rawValue.lowercased())"
+        var filename = "\(dateString)_\(String(format: "%03d", counter)).\(format.rawValue.lowercased())"
+
+        let destPath = NSString(string: scanDestination).expandingTildeInPath
+        let destURL = URL(fileURLWithPath: destPath)
 
         while FileManager.default.fileExists(atPath: destURL.appendingPathComponent(filename).path) {
             counter += 1
-            filename = template.replacingOccurrences(of: "###", with: String(format: "%03d", counter))
-            filename += ".\(format.rawValue.lowercased())"
+            filename = "\(dateString)_\(String(format: "%03d", counter)).\(format.rawValue.lowercased())"
         }
 
         return filename
