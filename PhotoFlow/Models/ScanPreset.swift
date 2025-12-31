@@ -1,6 +1,6 @@
 //
 //  ScanPreset.swift
-//  PhotoFlow
+//  ScanFlow
 //
 //  Created by Claude on 2024-12-30.
 //
@@ -20,7 +20,7 @@ enum DocumentType: String, Codable, CaseIterable {
     case panoramic = "Panoramic"
 }
 
-struct ScanPreset: Identifiable, Codable {
+struct ScanPreset: Identifiable, Codable, Equatable {
     let id: UUID
     var name: String
     var resolution: Int // DPI
@@ -33,6 +33,13 @@ struct ScanPreset: Identifiable, Codable {
     var deskew: Bool
     var destination: String // Path as string for Codable
     var documentType: DocumentType
+
+    // Advanced scanning options
+    var useDuplex: Bool = false        // Scan both sides
+    var useADF: Bool = false           // Use automatic document feeder
+    var detectBlankPages: Bool = true  // Skip blank pages
+    var splitOnBarcode: Bool = false   // Split batch on barcode
+    var applyImprinter: Bool = false   // Apply dynamic text overlay
 
     init(
         id: UUID = UUID(),
@@ -63,34 +70,82 @@ struct ScanPreset: Identifiable, Codable {
     }
 
     static let defaults: [ScanPreset] = [
+        // Professional document scanning presets matching spec
         ScanPreset(
-            name: "Quick Scan (300 DPI JPEG)",
+            name: "Quick B&W (300 DPI)",
             resolution: 300,
             format: .jpeg,
-            quality: 0.90
+            quality: 0.85,
+            autoEnhance: true,
+            deskew: true,
+            documentType: .document
         ),
         ScanPreset(
-            name: "Archive Quality (600 DPI TIFF)",
+            name: "Searchable PDF (300 DPI)",
+            resolution: 300,
+            format: .jpeg,  // Will be converted to PDF with OCR
+            quality: 0.90,
+            autoEnhance: true,
+            deskew: true,
+            documentType: .document
+        ),
+        ScanPreset(
+            name: "Archive Quality (600 DPI)",
             resolution: 600,
             format: .tiff,
             quality: 1.0,
-            autoEnhance: false
+            autoEnhance: false,
+            deskew: true,
+            documentType: .document
+        ),
+        ScanPreset(
+            name: "Color Document (300 DPI)",
+            resolution: 300,
+            format: .jpeg,
+            quality: 0.92,
+            autoEnhance: true,
+            deskew: true,
+            documentType: .document
+        ),
+        ScanPreset(
+            name: "Receipt/Business Card",
+            resolution: 300,
+            format: .jpeg,
+            quality: 0.88,
+            autoEnhance: true,
+            deskew: true,
+            documentType: .photo  // Small document
+        ),
+        ScanPreset(
+            name: "Legal Documents (600 DPI Searchable)",
+            resolution: 600,
+            format: .tiff,
+            quality: 1.0,
+            autoEnhance: true,
+            deskew: true,
+            documentType: .document
+        ),
+        ScanPreset(
+            name: "Photo Scan (600 DPI)",
+            resolution: 600,
+            format: .jpeg,
+            quality: 0.95,
+            autoEnhance: true,
+            restoreColor: true,
+            removeRedEye: true,
+            documentType: .photo
         ),
         ScanPreset(
             name: "Enlargement (1200 DPI)",
             resolution: 1200,
             format: .tiff,
-            quality: 1.0
-        ),
-        ScanPreset(
-            name: "Faded Photos Restoration",
-            resolution: 600,
-            format: .jpeg,
-            quality: 0.95,
-            restoreColor: true,
-            removeRedEye: true
+            quality: 1.0,
+            autoEnhance: false,
+            documentType: .photo
         )
     ]
 
     static let quickScan = defaults[0]
+    static let searchablePDF = defaults[1]
+    static let archiveQuality = defaults[2]
 }

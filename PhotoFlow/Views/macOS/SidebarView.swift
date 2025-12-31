@@ -1,6 +1,6 @@
 //
 //  SidebarView.swift
-//  PhotoFlow
+//  ScanFlow
 //
 //  Created by Claude on 2024-12-30.
 //
@@ -27,19 +27,9 @@ struct SidebarView: View {
             .padding(.vertical, 4)
         }
         .listStyle(.sidebar)
-        .navigationTitle("PhotoFlow")
+        .navigationTitle("ScanFlow")
         .frame(minWidth: 200)
         .background(.thinMaterial)
-        .toolbar {
-            ToolbarItem(placement: .navigation) {
-                Button {
-                    NSApp.keyWindow?.firstResponder?.tryToPerform(#selector(NSSplitViewController.toggleSidebar(_:)), with: nil)
-                } label: {
-                    Image(systemName: "sidebar.left")
-                }
-                .help("Toggle Sidebar")
-            }
-        }
     }
 }
 

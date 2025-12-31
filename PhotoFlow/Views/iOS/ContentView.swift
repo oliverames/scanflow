@@ -1,6 +1,6 @@
 //
 //  ContentView.swift
-//  PhotoFlow
+//  ScanFlow
 //
 //  Created by Claude on 2024-12-30.
 //

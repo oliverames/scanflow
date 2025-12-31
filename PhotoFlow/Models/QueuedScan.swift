@@ -1,13 +1,13 @@
 //
 //  QueuedScan.swift
-//  PhotoFlow
+//  ScanFlow
 //
 //  Created by Claude on 2024-12-30.
 //
 
 import Foundation
 
-enum ScanStatus: Codable {
+enum ScanStatus: Codable, Equatable {
     case pending
     case scanning
     case processing

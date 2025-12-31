@@ -1,6 +1,6 @@
 //
 //  ControlPanelView.swift
-//  PhotoFlow
+//  ScanFlow
 //
 //  Created by Claude on 2024-12-30.
 //
@@ -13,8 +13,9 @@ struct ControlPanelView: View {
     var body: some View {
         @Bindable var appState = appState
 
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
                 // Scanner Info
                 VStack(alignment: .leading, spacing: 8) {
                     Label {
@@ -195,9 +196,12 @@ struct ControlPanelView: View {
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
                 .disabled(appState.isScanning)
+                }
+                .padding()
             }
-            .padding()
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 

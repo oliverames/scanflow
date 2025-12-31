@@ -1,16 +1,22 @@
 //
 //  LibraryView.swift
-//  PhotoFlow
+//  ScanFlow
 //
 //  Created by Claude on 2024-12-30.
 //
 
 import SwiftUI
+#if os(macOS)
+import AppKit
+import QuickLook
+#endif
 
 struct LibraryView: View {
     @Environment(AppState.self) private var appState
     @State private var selectedFiles: Set<ScannedFile.ID> = []
     @State private var searchText = ""
+    @State private var quickLookURL: URL?
+    @State private var showingQuickLook = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -26,6 +32,29 @@ struct LibraryView: View {
                 TextField("Search...", text: $searchText)
                     .textFieldStyle(.roundedBorder)
                     .frame(width: 200)
+                #endif
+
+                #if os(macOS)
+                Button {
+                    exportSelectedToPDF()
+                } label: {
+                    Label("Export to PDF", systemImage: "doc.fill")
+                }
+                .buttonStyle(.bordered)
+                .disabled(selectedFiles.isEmpty)
+
+                Button {
+                    if let firstSelected = selectedFiles.first,
+                       let file = appState.scannedFiles.first(where: { $0.id == firstSelected }) {
+                        quickLookURL = file.fileURL
+                        showingQuickLook = true
+                    }
+                } label: {
+                    Label("Quick Look", systemImage: "eye")
+                }
+                .buttonStyle(.bordered)
+                .disabled(selectedFiles.isEmpty)
+                .keyboardShortcut(" ", modifiers: [])
                 #endif
 
                 Button {
@@ -82,6 +111,30 @@ struct LibraryView: View {
         NSWorkspace.shared.open(url)
         #endif
     }
+
+    #if os(macOS)
+    private func exportSelectedToPDF() {
+        let selectedFileObjects = appState.scannedFiles.filter { selectedFiles.contains($0.id) }
+        guard !selectedFileObjects.isEmpty else { return }
+
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.pdf]
+        panel.nameFieldStringValue = "Scanned Documents.pdf"
+
+        panel.begin { response in
+            guard response == .OK, let url = panel.url else { return }
+
+            Task {
+                do {
+                    try await PDFExporter.export(files: selectedFileObjects, to: url)
+                    NSWorkspace.shared.open(url)
+                } catch {
+                    appState.showAlert(message: "Failed to export PDF: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+    #endif
 }
 
 struct FileGridItem: View {
@@ -121,6 +174,11 @@ struct FileGridItem: View {
                 .foregroundStyle(.secondary)
             }
         }
+        #if os(macOS)
+        .onDrag {
+            NSItemProvider(object: file.fileURL as NSURL)
+        }
+        #endif
     }
 }
 

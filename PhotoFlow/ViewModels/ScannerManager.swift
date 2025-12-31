@@ -1,6 +1,6 @@
 //
 //  ScannerManager.swift
-//  PhotoFlow
+//  ScanFlow
 //
 //  Created by Claude on 2024-12-30.
 //
@@ -47,6 +47,7 @@ struct ScanResult {
 }
 
 @Observable
+@MainActor
 class ScannerManager: NSObject {
     #if os(macOS)
     var availableScanners: [ICScannerDevice] = []
@@ -60,7 +61,7 @@ class ScannerManager: NSObject {
 
     // Mock data for initial testing
     var mockScannerName: String = "Epson FastFoto FF-680W"
-    var useMockScanner: Bool = true
+    var useMockScanner: Bool = false
 
     override init() {
         super.init()
@@ -73,16 +74,24 @@ class ScannerManager: NSObject {
     private func setupDeviceBrowser() {
         deviceBrowser = ICDeviceBrowser()
         deviceBrowser?.delegate = self
-        deviceBrowser?.browsedDeviceTypeMask = [.scanner]
+        deviceBrowser?.browsedDeviceTypeMask = ICDeviceTypeMask.scanner
     }
 
     func discoverScanners() async {
         connectionState = .discovering
+
+        // Clear previous scanners
+        availableScanners.removeAll()
+
         deviceBrowser?.start()
 
-        // For mock mode, simulate discovery
-        if useMockScanner {
-            try? await Task.sleep(for: .seconds(1))
+        // Wait for discovery to complete (give it 5 seconds)
+        try? await Task.sleep(for: .seconds(5))
+
+        // Update state based on results
+        if availableScanners.isEmpty {
+            connectionState = .disconnected
+        } else {
             connectionState = .disconnected
         }
     }
@@ -92,7 +101,7 @@ class ScannerManager: NSObject {
         selectedScanner = scanner
 
         scanner.delegate = self
-        scanner.requestOpenSession()
+        try await scanner.requestOpenSession()
 
         // Wait for connection
         try await Task.sleep(for: .seconds(1))
@@ -112,7 +121,7 @@ class ScannerManager: NSObject {
 
     func disconnect() async {
         if let scanner = selectedScanner {
-            scanner.requestCloseSession()
+            try? await scanner.requestCloseSession()
         }
         selectedScanner = nil
         connectionState = .disconnected
@@ -126,23 +135,85 @@ class ScannerManager: NSObject {
         connectionState = .scanning
         isScanning = true
 
-        // Simulate scanning
-        try await Task.sleep(for: .seconds(3))
+        defer {
+            isScanning = false
+            connectionState = .connected
+        }
 
-        // Create mock result
-        let mockImage = createMockImage()
-        let metadata = ScanMetadata(
-            resolution: preset.resolution,
-            colorSpace: "sRGB",
-            timestamp: Date(),
-            scannerModel: mockScannerName
-        )
+        // Use mock scanner if enabled
+        if useMockScanner {
+            try await Task.sleep(for: .seconds(3))
+            let mockImage = createMockImage()
+            let metadata = ScanMetadata(
+                resolution: preset.resolution,
+                colorSpace: "sRGB",
+                timestamp: Date(),
+                scannerModel: mockScannerName,
+                width: Int(mockImage.size.width),
+                height: Int(mockImage.size.height),
+                bitDepth: 8
+            )
+            return ScanResult(image: mockImage, metadata: metadata)
+        }
 
-        isScanning = false
-        connectionState = .connected
+        // Real scanner workflow
+        guard let scanner = selectedScanner else {
+            throw ScannerError.notConnected
+        }
 
-        return ScanResult(image: mockImage, metadata: metadata)
+        // Configure scanner functional unit
+        let functionalUnit = scanner.selectedFunctionalUnit
+        guard functionalUnit != nil else {
+            throw ScannerError.scanFailed
+        }
+
+        // Apply preset settings to scanner
+        configureScannerSettings(functionalUnit, with: preset)
+
+        // Perform the scan
+        return try await withCheckedThrowingContinuation { continuation in
+            currentScanContinuation = continuation
+            scanner.requestScan()
+        }
     }
+
+    private func configureScannerSettings(_ functionalUnit: ICScannerFunctionalUnit, with preset: ScanPreset) {
+        // Set resolution
+        if functionalUnit.supportedResolutions.contains(preset.resolution) {
+            functionalUnit.resolution = preset.resolution
+        }
+
+        // Configure document feeder if available
+        if let documentFeeder = functionalUnit as? ICScannerFunctionalUnitDocumentFeeder {
+            documentFeeder.documentType = .typeDefault
+
+            // Enable duplex if requested and supported
+            if preset.useDuplex && documentFeeder.supportsDuplexScanning {
+                documentFeeder.duplexScanningEnabled = true
+            } else {
+                documentFeeder.duplexScanningEnabled = false
+            }
+
+            // Enable document feeder mode
+            if preset.useADF {
+                documentFeeder.documentType = .typeDefault
+            }
+        }
+
+        // Set scan area to maximum
+        let physicalSize = functionalUnit.physicalSize
+        functionalUnit.scanArea = NSRect(origin: .zero, size: physicalSize)
+
+        // Set pixel data type based on preset
+        if preset.documentType == .document {
+            functionalUnit.pixelDataType = .BW // Black & white for documents
+        } else {
+            functionalUnit.pixelDataType = .RGB // Color for photos
+        }
+    }
+
+    // Store continuation for async scanning
+    private var currentScanContinuation: CheckedContinuation<ScanResult, Error>?
 
     func requestOverviewScan() async throws -> NSImage {
         guard connectionState.isConnected || useMockScanner else {
@@ -184,46 +255,121 @@ class ScannerManager: NSObject {
 #if os(macOS)
 // MARK: - ICDeviceBrowserDelegate
 extension ScannerManager: ICDeviceBrowserDelegate {
-    func deviceBrowser(_ browser: ICDeviceBrowser, didAdd device: ICDevice, moreComing: Bool) {
+    nonisolated func deviceBrowser(_ browser: ICDeviceBrowser, didAdd device: ICDevice, moreComing: Bool) {
         if let scanner = device as? ICScannerDevice {
-            availableScanners.append(scanner)
-            if !moreComing {
-                connectionState = .disconnected
+            Task { @MainActor in
+                availableScanners.append(scanner)
+                if !moreComing {
+                    connectionState = .disconnected
+                }
             }
         }
     }
 
-    func deviceBrowser(_ browser: ICDeviceBrowser, didRemove device: ICDevice, moreGoing: Bool) {
+    nonisolated func deviceBrowser(_ browser: ICDeviceBrowser, didRemove device: ICDevice, moreGoing: Bool) {
         if let scanner = device as? ICScannerDevice {
-            availableScanners.removeAll { $0 == scanner }
+            Task { @MainActor in
+                availableScanners.removeAll { $0 == scanner }
+            }
         }
     }
 
-    func deviceBrowser(_ browser: ICDeviceBrowser, didEncounterError error: Error) {
-        connectionState = .error(error.localizedDescription)
-        lastError = error.localizedDescription
+    nonisolated func deviceBrowser(_ browser: ICDeviceBrowser, didEncounterError error: Error) {
+        Task { @MainActor in
+            connectionState = .error(error.localizedDescription)
+            lastError = error.localizedDescription
+        }
     }
 }
 
 // MARK: - ICScannerDeviceDelegate
 extension ScannerManager: ICScannerDeviceDelegate {
-    func device(_ device: ICDevice, didOpenSessionWithError error: Error?) {
-        if let error = error {
-            connectionState = .error(error.localizedDescription)
-            lastError = error.localizedDescription
-        } else {
-            connectionState = .connected
+    nonisolated func didRemove(_ device: ICDevice) {
+        if let scanner = device as? ICScannerDevice {
+            Task { @MainActor in
+                if scanner == selectedScanner {
+                    selectedScanner = nil
+                    connectionState = .disconnected
+                }
+            }
         }
     }
 
-    func device(_ device: ICDevice, didCloseSessionWithError error: Error?) {
-        connectionState = .disconnected
-        selectedScanner = nil
+    nonisolated func device(_ device: ICDevice, didOpenSessionWithError error: Error?) {
+        Task { @MainActor in
+            if let error = error {
+                connectionState = .error(error.localizedDescription)
+                lastError = error.localizedDescription
+            } else {
+                connectionState = .connected
+            }
+        }
     }
 
-    func scannerDevice(_ scanner: ICScannerDevice, didSelect functionalUnit: ICScannerFunctionalUnit, error: Error?) {
+    nonisolated func device(_ device: ICDevice, didCloseSessionWithError error: Error?) {
+        Task { @MainActor in
+            connectionState = .disconnected
+            selectedScanner = nil
+        }
+    }
+
+    nonisolated func scannerDevice(_ scanner: ICScannerDevice, didSelect functionalUnit: ICScannerFunctionalUnit, error: Error?) {
         if let error = error {
-            lastError = error.localizedDescription
+            Task { @MainActor in
+                lastError = error.localizedDescription
+            }
+        }
+    }
+
+    nonisolated func scannerDevice(_ scanner: ICScannerDevice, didScanTo url: URL) {
+        // Image was scanned successfully
+        Task { @MainActor in
+            guard let continuation = currentScanContinuation else { return }
+            currentScanContinuation = nil
+
+            do {
+                guard let image = NSImage(contentsOf: url) else {
+                    continuation.resume(throwing: ScannerError.scanFailed)
+                    return
+                }
+
+                let metadata = ScanMetadata(
+                    resolution: scanner.selectedFunctionalUnit.resolution,
+                    colorSpace: "sRGB",
+                    timestamp: Date(),
+                    scannerModel: scanner.name ?? "Unknown Scanner",
+                    width: Int(image.size.width),
+                    height: Int(image.size.height),
+                    bitDepth: scanner.selectedFunctionalUnit.pixelDataType == .BW ? 1 : 8
+                )
+
+                let result = ScanResult(image: image, metadata: metadata)
+                continuation.resume(returning: result)
+
+                // Clean up temporary file
+                try? FileManager.default.removeItem(at: url)
+            } catch {
+                continuation.resume(throwing: error)
+            }
+        }
+    }
+
+    nonisolated func scannerDevice(_ scanner: ICScannerDevice, didCompleteOverviewScanWithError error: Error?) {
+        if let error = error {
+            Task { @MainActor in
+                lastError = error.localizedDescription
+            }
+        }
+    }
+
+    nonisolated func scannerDevice(_ scanner: ICScannerDevice, didCompleteScanWithError error: Error?) {
+        Task { @MainActor in
+            guard let continuation = currentScanContinuation else { return }
+            currentScanContinuation = nil
+
+            if let error = error {
+                continuation.resume(throwing: error)
+            }
         }
     }
 }

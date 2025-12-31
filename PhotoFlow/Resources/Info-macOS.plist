@@ -7,11 +7,13 @@
     <key>CFBundleExecutable</key>
     <string>$(EXECUTABLE_NAME)</string>
     <key>CFBundleIdentifier</key>
-    <string>com.photoflow.scanner</string>
+    <string>com.scanflow.app</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>PhotoFlow</string>
+    <string>ScanFlow</string>
+    <key>CFBundleDisplayName</key>
+    <string>ScanFlow</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
@@ -24,12 +26,10 @@
     <string>Copyright © 2024. All rights reserved.</string>
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
-    <key>NSMainStoryboardFile</key>
-    <string>Main</string>
     <key>NSCameraUsageDescription</key>
-    <string>PhotoFlow needs access to the camera for document scanning</string>
+    <string>ScanFlow needs access to the camera for document scanning</string>
     <key>NSLocalNetworkUsageDescription</key>
-    <string>PhotoFlow needs network access to discover and connect to network scanners</string>
+    <string>ScanFlow needs network access to discover and connect to network scanners</string>
     <key>NSBonjourServices</key>
     <array>
         <string>_scanner._tcp</string>

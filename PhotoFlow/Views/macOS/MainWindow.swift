@@ -1,6 +1,6 @@
 //
 //  MainWindow.swift
-//  PhotoFlow
+//  ScanFlow
 //
 //  Created by Claude on 2024-12-30.
 //
@@ -14,13 +14,21 @@ struct MainWindow: View {
     var body: some View {
         @Bindable var appState = appState
 
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: .constant(.all)) {
             SidebarView()
+                .navigationSplitViewColumnWidth(min: 200, ideal: 220, max: 300)
         } detail: {
             DetailView()
+                .navigationSplitViewColumnWidth(min: 700, ideal: 900)
         }
         .navigationSplitViewStyle(.balanced)
         .background(.ultraThinMaterial)
+        .onAppear {
+            // Automatically discover scanners on launch
+            Task {
+                await appState.scannerManager.discoverScanners()
+            }
+        }
         .toolbar {
             ToolbarItemGroup(placement: .automatic) {
                 ScannerStatusView()
@@ -34,14 +42,10 @@ struct MainWindow: View {
                     Button("Archive Quality (600 DPI)") {
                         appState.currentPreset = ScanPreset.defaults[1]
                     }
-                    Divider()
-                    Button("Settings...") {
-                        // Open settings
-                    }
                 } label: {
-                    Image(systemName: "gearshape")
+                    Image(systemName: "doc.viewfinder")
                 }
-                .help("Quick Settings")
+                .help("Quick Presets")
 
                 Button {
                     Task {

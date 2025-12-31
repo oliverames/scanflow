@@ -1,6 +1,6 @@
 //
 //  ScanView.swift
-//  PhotoFlow
+//  ScanFlow
 //
 //  Created by Claude on 2024-12-30.
 //
@@ -12,15 +12,15 @@ struct ScanView: View {
 
     var body: some View {
         #if os(macOS)
-        HSplitView {
+        HStack(spacing: 0) {
             // Preview Area
             PreviewView()
-                .frame(minWidth: 400)
+                .frame(minWidth: 400, maxWidth: .infinity)
 
-            // Control Panel
+            // Control Panel (Inspector style)
             ControlPanelView()
-                .frame(width: 320)
-                .background(.ultraThinMaterial)
+                .frame(width: 300)
+                .background(.thinMaterial)
         }
         #else
         VStack {
