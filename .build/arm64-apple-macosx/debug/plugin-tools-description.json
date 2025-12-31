@@ -79,6 +79,10 @@
         },
         {
           "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/ViewModels/SettingsStore.swift"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/Shared/Components/ControlPanelView.swift"
         },
         {
@@ -149,6 +153,7 @@
         "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/PhotoFlowApp.swift.o",
         "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/AppState.swift.o",
         "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/ScannerManager.swift.o",
+        "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/SettingsStore.swift.o",
         "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/ControlPanelView.swift.o",
         "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/PreviewView.swift.o",
         "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/ScannerStatusView.swift.o",
@@ -251,6 +256,10 @@
         },
         {
           "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/SettingsStore.swift.o"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/ControlPanelView.swift.o"
         },
         {
@@ -311,6 +320,7 @@
         "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/PhotoFlowApp.swift",
         "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/ViewModels/AppState.swift",
         "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/ViewModels/ScannerManager.swift",
+        "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/ViewModels/SettingsStore.swift",
         "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/Shared/Components/ControlPanelView.swift",
         "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/Shared/Components/PreviewView.swift",
         "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/Shared/Components/ScannerStatusView.swift",
@@ -346,6 +356,7 @@
       "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/PhotoFlowApp.swift",
       "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/ViewModels/AppState.swift",
       "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/ViewModels/ScannerManager.swift",
+      "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/ViewModels/SettingsStore.swift",
       "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/Shared/Components/ControlPanelView.swift",
       "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/Shared/Components/PreviewView.swift",
       "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/Shared/Components/ScannerStatusView.swift",
@@ -487,6 +498,10 @@
         },
         {
           "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/ViewModels/SettingsStore.swift"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/Shared/Components/ControlPanelView.swift"
         },
         {
@@ -606,6 +621,10 @@
         {
           "kind" : "file",
           "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/ScannerStatusView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/SettingsStore.swift.o"
         },
         {
           "kind" : "file",
