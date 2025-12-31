@@ -76,7 +76,9 @@ class ScannerManager: NSObject {
 
     #if os(macOS)
     private func setupDeviceBrowser() {
+        print("🔧 [ScannerManager] Setting up device browser...")
         logger.info("Setting up device browser for scanner discovery")
+
         deviceBrowser = ICDeviceBrowser()
         deviceBrowser?.delegate = self
 
@@ -89,63 +91,125 @@ class ScannerManager: NSObject {
         let bluetoothMask = ICDeviceLocationTypeMask.bluetooth.rawValue
 
         let combinedMask = scannerTypeMask | localMask | sharedMask | bonjourMask | bluetoothMask
+        print("🔧 [ScannerManager] Combined device mask: \(combinedMask) (scanner=\(scannerTypeMask), local=\(localMask), shared=\(sharedMask), bonjour=\(bonjourMask), bluetooth=\(bluetoothMask))")
+
         if let mask = ICDeviceTypeMask(rawValue: combinedMask) {
             deviceBrowser?.browsedDeviceTypeMask = mask
+            print("🔧 [ScannerManager] Device browser mask set successfully")
+        } else {
+            print("❌ [ScannerManager] Failed to create device type mask!")
         }
 
+        print("🔧 [ScannerManager] Device browser delegate: \(String(describing: deviceBrowser?.delegate))")
         logger.info("Device browser configured for local, shared, bonjour, and bluetooth scanners (mask: \(combinedMask))")
     }
 
     func discoverScanners() async {
+        print("🔍 [ScannerManager] discoverScanners() called")
         logger.info("Starting scanner discovery...")
         connectionState = .discovering
 
-        // Clear previous scanners
-        availableScanners.removeAll()
+        // DON'T clear previous scanners - let the delegate manage the list
+        // availableScanners.removeAll()
 
         // Ensure device browser is set up
         if deviceBrowser == nil {
+            print("⚠️ [ScannerManager] Device browser was nil, setting up again")
             logger.warning("Device browser was nil, setting up again")
             setupDeviceBrowser()
         }
 
-        logger.info("Starting device browser...")
-        deviceBrowser?.start()
+        let isBrowsing = deviceBrowser?.isBrowsing ?? false
+        print("🔍 [ScannerManager] Device browser isBrowsing: \(isBrowsing)")
 
-        // Wait for discovery to complete (give it 5 seconds)
+        // Only start if not already browsing
+        if !isBrowsing {
+            print("🔍 [ScannerManager] Calling deviceBrowser.start()...")
+            deviceBrowser?.start()
+            print("🔍 [ScannerManager] Device browser isBrowsing after start: \(deviceBrowser?.isBrowsing ?? false)")
+        } else {
+            print("🔍 [ScannerManager] Device browser already running")
+        }
+
+        logger.info("Device browser running...")
+
+        // Wait for discovery
+        print("🔍 [ScannerManager] Waiting 5 seconds for scanner discovery...")
         logger.info("Waiting 5 seconds for scanner discovery...")
         try? await Task.sleep(for: .seconds(5))
 
         // Update state based on results
+        print("🔍 [ScannerManager] Discovery wait complete. Found \(self.availableScanners.count) scanner(s)")
         logger.info("Discovery complete. Found \(self.availableScanners.count) scanner(s)")
+
         if availableScanners.isEmpty {
+            print("⚠️ [ScannerManager] No scanners found!")
             logger.warning("No scanners found")
-            connectionState = .disconnected
         } else {
             for scanner in availableScanners {
+                print("✅ [ScannerManager] Found scanner: \(scanner.name ?? "Unknown")")
                 logger.info("Found scanner: \(scanner.name ?? "Unknown")")
             }
-            connectionState = .disconnected
+        }
+        connectionState = .disconnected
+    }
+
+    /// Start continuous browsing - call once at app launch
+    func startBrowsing() {
+        print("🔍 [ScannerManager] startBrowsing() called")
+        if deviceBrowser == nil {
+            setupDeviceBrowser()
+        }
+        if !(deviceBrowser?.isBrowsing ?? false) {
+            print("🔍 [ScannerManager] Starting device browser...")
+            deviceBrowser?.start()
+            print("🔍 [ScannerManager] Device browser started, isBrowsing: \(deviceBrowser?.isBrowsing ?? false)")
         }
     }
 
+    /// Stop browsing
+    func stopBrowsing() {
+        print("🔍 [ScannerManager] stopBrowsing() called")
+        deviceBrowser?.stop()
+    }
+
     func connect(to scanner: ICScannerDevice) async throws {
+        print("🔌 [ScannerManager] Connecting to scanner: \(scanner.name ?? "Unknown")")
         logger.info("Connecting to scanner: \(scanner.name ?? "Unknown")")
         connectionState = .connecting
         selectedScanner = scanner
 
         scanner.delegate = self
+
+        print("🔌 [ScannerManager] Scanner hasOpenSession before: \(scanner.hasOpenSession)")
+        print("🔌 [ScannerManager] Requesting open session...")
         logger.info("Requesting open session...")
-        try await scanner.requestOpenSession()
 
-        // Wait for connection
-        try await Task.sleep(for: .seconds(1))
+        do {
+            try await scanner.requestOpenSession()
+            print("🔌 [ScannerManager] requestOpenSession() completed")
+        } catch {
+            print("❌ [ScannerManager] requestOpenSession() threw error: \(error)")
+            logger.error("Open session error: \(error.localizedDescription)")
+            connectionState = .error(error.localizedDescription)
+            selectedScanner = nil
+            throw error
+        }
 
+        // Wait for connection to establish
+        print("🔌 [ScannerManager] Waiting for session to establish...")
+        try await Task.sleep(for: .seconds(2))
+
+        print("🔌 [ScannerManager] Scanner hasOpenSession after: \(scanner.hasOpenSession)")
         if scanner.hasOpenSession {
+            print("✅ [ScannerManager] Successfully connected!")
             logger.info("Successfully connected to scanner")
             connectionState = .connected
         } else {
-            logger.error("Failed to open scanner session")
+            print("❌ [ScannerManager] Session not open after request")
+            logger.error("Failed to open scanner session - session not open")
+            connectionState = .disconnected
+            selectedScanner = nil
             throw ScannerError.connectionFailed
         }
     }
@@ -295,33 +359,55 @@ class ScannerManager: NSObject {
 // MARK: - ICDeviceBrowserDelegate
 extension ScannerManager: ICDeviceBrowserDelegate {
     nonisolated func deviceBrowser(_ browser: ICDeviceBrowser, didAdd device: ICDevice, moreComing: Bool) {
+        // Log ALL devices found for debugging
+        let deviceType = device is ICScannerDevice ? "SCANNER" : "OTHER"
+        let locationDesc: String
+        if device.usbLocationID != 0 {
+            locationDesc = "USB"
+        } else {
+            locationDesc = "Network/Shared"
+        }
+
+        print("🔍 [ICDeviceBrowser] Device found: \(device.name ?? "Unknown") | Type: \(deviceType) | Location: \(locationDesc) | moreComing: \(moreComing)")
+
         if let scanner = device as? ICScannerDevice {
             Task { @MainActor in
-                logger.info("Device browser found scanner: \(scanner.name ?? "Unknown"), moreComing: \(moreComing)")
-                availableScanners.append(scanner)
+                logger.info("✅ Scanner found: \(scanner.name ?? "Unknown"), location: \(locationDesc)")
+                print("✅ Adding scanner to list: \(scanner.name ?? "Unknown")")
+                if !self.availableScanners.contains(scanner) {
+                    self.availableScanners.append(scanner)
+                }
                 if !moreComing {
-                    logger.info("Scanner discovery complete, found \(self.availableScanners.count) scanner(s)")
-                    connectionState = .disconnected
+                    logger.info("Scanner discovery batch complete, found \(self.availableScanners.count) scanner(s)")
+                    self.connectionState = .disconnected
                 }
             }
+        } else {
+            print("⚠️ Device is not a scanner: \(device.name ?? "Unknown")")
         }
     }
 
     nonisolated func deviceBrowser(_ browser: ICDeviceBrowser, didRemove device: ICDevice, moreGoing: Bool) {
+        print("🗑️ [ICDeviceBrowser] Device removed: \(device.name ?? "Unknown")")
         if let scanner = device as? ICScannerDevice {
             Task { @MainActor in
                 logger.info("Scanner removed: \(scanner.name ?? "Unknown")")
-                availableScanners.removeAll { $0 == scanner }
+                self.availableScanners.removeAll { $0 == scanner }
             }
         }
     }
 
     nonisolated func deviceBrowser(_ browser: ICDeviceBrowser, didEncounterError error: Error) {
+        print("❌ [ICDeviceBrowser] Error: \(error.localizedDescription)")
         Task { @MainActor in
             logger.error("Device browser error: \(error.localizedDescription)")
-            connectionState = .error(error.localizedDescription)
-            lastError = error.localizedDescription
+            self.connectionState = .error(error.localizedDescription)
+            self.lastError = error.localizedDescription
         }
+    }
+
+    nonisolated func deviceBrowserDidEnumerateLocalDevices(_ browser: ICDeviceBrowser) {
+        print("📋 [ICDeviceBrowser] Finished enumerating LOCAL devices")
     }
 }
 
