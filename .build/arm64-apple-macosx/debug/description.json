@@ -1,0 +1,640 @@
+{
+  "builtTestProducts" : [
+
+  ],
+  "copyCommands" : {
+    "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow_ScanFlow.bundle/Info-macOS.plist" : {
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Resources/Info-macOS.plist"
+        }
+      ],
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow_ScanFlow.bundle/Info-macOS.plist"
+        }
+      ]
+    },
+    "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow_ScanFlow.bundle/PhotoFlow.entitlements" : {
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/PhotoFlow.entitlements"
+        }
+      ],
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow_ScanFlow.bundle/PhotoFlow.entitlements"
+        }
+      ]
+    }
+  },
+  "explicitTargetDependencyImportCheckingMode" : {
+    "none" : {
+
+    }
+  },
+  "generatedSourceTargetSet" : [
+
+  ],
+  "pluginDescriptions" : [
+
+  ],
+  "swiftCommands" : {
+    "C.ScanFlow-arm64-apple-macosx26.0-debug.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/sources",
+      "importPath" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Models/QueuedScan.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Models/ScanMetadata.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Models/ScanPreset.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Models/ScannedFile.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/PhotoFlowApp.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/ViewModels/AppState.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/ViewModels/ScannerManager.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/Shared/Components/ControlPanelView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/Shared/Components/PreviewView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/Shared/Components/ScannerStatusView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/Shared/LibraryView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/Shared/PresetView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/Shared/QueueView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/Shared/ScanView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/iOS/ContentView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/macOS/MainWindow.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/macOS/SettingsView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/macOS/SidebarView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/DerivedSources/resource_bundle_accessor.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "virtual",
+          "name" : "<ScanFlow-arm64-apple-macosx26.0-debug.module-resources>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/sources"
+        }
+      ],
+      "isLibrary" : false,
+      "moduleName" : "ScanFlow",
+      "moduleOutputPath" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/Modules/ScanFlow.swiftmodule",
+      "objects" : [
+        "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/QueuedScan.swift.o",
+        "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/ScanMetadata.swift.o",
+        "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/ScanPreset.swift.o",
+        "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/ScannedFile.swift.o",
+        "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/PhotoFlowApp.swift.o",
+        "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/AppState.swift.o",
+        "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/ScannerManager.swift.o",
+        "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/ControlPanelView.swift.o",
+        "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/PreviewView.swift.o",
+        "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/ScannerStatusView.swift.o",
+        "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/LibraryView.swift.o",
+        "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/PresetView.swift.o",
+        "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/QueueView.swift.o",
+        "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/ScanView.swift.o",
+        "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/ContentView.swift.o",
+        "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/MainWindow.swift.o",
+        "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/SettingsView.swift.o",
+        "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/SidebarView.swift.o",
+        "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/resource_bundle_accessor.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx14.0",
+        "-incremental",
+        "-enable-batch-mode",
+        "-serialize-diagnostics",
+        "-index-store-path",
+        "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-j10",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_AVAILABLE",
+        "-module-cache-path",
+        "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-Xfrontend",
+        "-entry-point-function-name",
+        "-Xfrontend",
+        "ScanFlow_main",
+        "-swift-version",
+        "5",
+        "-enable-upcoming-feature",
+        "BareSlashRegexLiterals",
+        "-plugin-path",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+        "-I",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-L",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "scanning_app"
+      ],
+      "outputFileMapPath" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/QueuedScan.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/ScanMetadata.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/ScanPreset.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/ScannedFile.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/PhotoFlowApp.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/AppState.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/ScannerManager.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/ControlPanelView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/PreviewView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/ScannerStatusView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/LibraryView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/PresetView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/QueueView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/ScanView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/ContentView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/MainWindow.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/SettingsView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/SidebarView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/resource_bundle_accessor.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/Modules/ScanFlow.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Models/QueuedScan.swift",
+        "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Models/ScanMetadata.swift",
+        "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Models/ScanPreset.swift",
+        "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Models/ScannedFile.swift",
+        "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/PhotoFlowApp.swift",
+        "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/ViewModels/AppState.swift",
+        "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/ViewModels/ScannerManager.swift",
+        "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/Shared/Components/ControlPanelView.swift",
+        "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/Shared/Components/PreviewView.swift",
+        "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/Shared/Components/ScannerStatusView.swift",
+        "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/Shared/LibraryView.swift",
+        "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/Shared/PresetView.swift",
+        "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/Shared/QueueView.swift",
+        "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/Shared/ScanView.swift",
+        "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/iOS/ContentView.swift",
+        "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/macOS/MainWindow.swift",
+        "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/macOS/SettingsView.swift",
+        "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/macOS/SidebarView.swift",
+        "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/DerivedSources/resource_bundle_accessor.swift"
+      ],
+      "tempsPath" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build",
+      "wholeModuleOptimization" : false
+    }
+  },
+  "swiftFrontendCommands" : {
+
+  },
+  "swiftTargetScanArgs" : {
+    "ScanFlow" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "ScanFlow",
+      "-package-name",
+      "scanning_app",
+      "-c",
+      "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Models/QueuedScan.swift",
+      "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Models/ScanMetadata.swift",
+      "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Models/ScanPreset.swift",
+      "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Models/ScannedFile.swift",
+      "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/PhotoFlowApp.swift",
+      "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/ViewModels/AppState.swift",
+      "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/ViewModels/ScannerManager.swift",
+      "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/Shared/Components/ControlPanelView.swift",
+      "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/Shared/Components/PreviewView.swift",
+      "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/Shared/Components/ScannerStatusView.swift",
+      "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/Shared/LibraryView.swift",
+      "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/Shared/PresetView.swift",
+      "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/Shared/QueueView.swift",
+      "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/Shared/ScanView.swift",
+      "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/iOS/ContentView.swift",
+      "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/macOS/MainWindow.swift",
+      "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/macOS/SettingsView.swift",
+      "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/macOS/SidebarView.swift",
+      "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/DerivedSources/resource_bundle_accessor.swift",
+      "-I",
+      "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/Modules",
+      "-target",
+      "arm64-apple-macosx14.0",
+      "-incremental",
+      "-enable-batch-mode",
+      "-serialize-diagnostics",
+      "-index-store-path",
+      "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-j10",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_AVAILABLE",
+      "-module-cache-path",
+      "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-Xfrontend",
+      "-entry-point-function-name",
+      "-Xfrontend",
+      "ScanFlow_main",
+      "-swift-version",
+      "5",
+      "-enable-upcoming-feature",
+      "BareSlashRegexLiterals",
+      "-plugin-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+      "-I",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-L",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "scanning_app",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ]
+  },
+  "targetDependencyMap" : {
+    "ScanFlow" : [
+
+    ]
+  },
+  "testDiscoveryCommands" : {
+
+  },
+  "testEntryPointCommands" : {
+
+  },
+  "traitConfiguration" : {
+    "default" : {
+
+    }
+  },
+  "writeCommands" : {
+    "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow-entitlement.plist" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<entitlement-plist>"
+        },
+        {
+          "kind" : "virtual",
+          "name" : "<com.apple.security.get-task-allow>"
+        }
+      ],
+      "outputFilePath" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow-entitlement.plist"
+    },
+    "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Models/QueuedScan.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Models/ScanMetadata.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Models/ScanPreset.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Models/ScannedFile.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/PhotoFlowApp.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/ViewModels/AppState.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/ViewModels/ScannerManager.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/Shared/Components/ControlPanelView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/Shared/Components/PreviewView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/Shared/Components/ScannerStatusView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/Shared/LibraryView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/Shared/PresetView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/Shared/QueueView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/Shared/ScanView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/iOS/ContentView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/macOS/MainWindow.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/macOS/SettingsView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/macOS/SidebarView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/DerivedSources/resource_bundle_accessor.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/sources"
+    },
+    "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.product/Objects.LinkFileList" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<link-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/AppState.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/ContentView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/ControlPanelView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/LibraryView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/MainWindow.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/PhotoFlowApp.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/PresetView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/PreviewView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/QueueView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/QueuedScan.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/ScanMetadata.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/ScanPreset.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/ScanView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/ScannedFile.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/ScannerManager.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/ScannerStatusView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/SettingsView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/SidebarView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.build/resource_bundle_accessor.swift.o"
+        }
+      ],
+      "outputFilePath" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/ScanFlow.product/Objects.LinkFileList"
+    },
+    "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt" : {
+      "alwaysOutOfDate" : true,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<swift-get-version>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+        }
+      ],
+      "outputFilePath" : "/Users/oliverames/Library/CloudStorage/Source/Scanning-app/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+    }
+  }
+}
