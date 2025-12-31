@@ -34,6 +34,13 @@
     <array>
         <string>_scanner._tcp</string>
         <string>_uscan._tcp</string>
+        <string>_uscans._tcp</string>
+        <string>_eSCL._tcp</string>
+        <string>_eSCLS._tcp</string>
+        <string>_ipp._tcp</string>
+        <string>_ipps._tcp</string>
+        <string>_pdl-datastream._tcp</string>
+        <string>_privet._tcp</string>
     </array>
     <key>LSApplicationCategoryType</key>
     <string>public.app-category.productivity</string>
