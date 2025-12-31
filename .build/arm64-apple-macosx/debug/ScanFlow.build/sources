@@ -5,6 +5,7 @@
 /Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/PhotoFlowApp.swift
 /Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/ViewModels/AppState.swift
 /Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/ViewModels/ScannerManager.swift
+/Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/ViewModels/SettingsStore.swift
 /Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/Shared/Components/ControlPanelView.swift
 /Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/Shared/Components/PreviewView.swift
 /Users/oliverames/Library/CloudStorage/Source/Scanning-app/PhotoFlow/Views/Shared/Components/ScannerStatusView.swift
