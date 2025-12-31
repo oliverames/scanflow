@@ -26,9 +26,13 @@ enum NavigationSection: String, CaseIterable, Identifiable {
     }
 }
 
+@MainActor
 @Observable
 class AppState {
     var scannerManager = ScannerManager()
+    #if os(macOS)
+    var imageProcessor = ImageProcessor()
+    #endif
     var scanQueue: [QueuedScan] = []
     var scannedFiles: [ScannedFile] = []
     var presets: [ScanPreset] = ScanPreset.defaults
@@ -68,6 +72,82 @@ class AppState {
     var useMockScanner: Bool {
         get { _settings.useMockScanner }
         set { _settings.useMockScanner = newValue }
+    }
+
+    // Barcode Settings
+    var barcodeEnabled: Bool {
+        get { _settings.barcodeEnabled }
+        set { _settings.barcodeEnabled = newValue }
+    }
+    var barcodeUseForNaming: Bool {
+        get { _settings.barcodeUseForNaming }
+        set { _settings.barcodeUseForNaming = newValue }
+    }
+    var barcodeUseForSplitting: Bool {
+        get { _settings.barcodeUseForSplitting }
+        set { _settings.barcodeUseForSplitting = newValue }
+    }
+    var barcodeSplitPattern: String {
+        get { _settings.barcodeSplitPattern }
+        set { _settings.barcodeSplitPattern = newValue }
+    }
+    var barcodeUseForFolderRouting: Bool {
+        get { _settings.barcodeUseForFolderRouting }
+        set { _settings.barcodeUseForFolderRouting = newValue }
+    }
+    var barcodeAddToMetadata: Bool {
+        get { _settings.barcodeAddToMetadata }
+        set { _settings.barcodeAddToMetadata = newValue }
+    }
+    var barcodeMinimumConfidence: Double {
+        get { _settings.barcodeMinimumConfidence }
+        set { _settings.barcodeMinimumConfidence = newValue }
+    }
+
+    // Imprinter Settings
+    var imprinterEnabled: Bool {
+        get { _settings.imprinterEnabled }
+        set { _settings.imprinterEnabled = newValue }
+    }
+    var imprinterText: String {
+        get { _settings.imprinterText }
+        set { _settings.imprinterText = newValue }
+    }
+    var imprinterPosition: String {
+        get { _settings.imprinterPosition }
+        set { _settings.imprinterPosition = newValue }
+    }
+    var imprinterRotation: Int {
+        get { _settings.imprinterRotation }
+        set { _settings.imprinterRotation = newValue }
+    }
+    var imprinterOpacity: Double {
+        get { _settings.imprinterOpacity }
+        set { _settings.imprinterOpacity = newValue }
+    }
+    var imprinterFontSize: Double {
+        get { _settings.imprinterFontSize }
+        set { _settings.imprinterFontSize = newValue }
+    }
+    var imprinterFontName: String {
+        get { _settings.imprinterFontName }
+        set { _settings.imprinterFontName = newValue }
+    }
+    var imprinterTextColor: String {
+        get { _settings.imprinterTextColor }
+        set { _settings.imprinterTextColor = newValue }
+    }
+    var imprinterIncludeDate: Bool {
+        get { _settings.imprinterIncludeDate }
+        set { _settings.imprinterIncludeDate = newValue }
+    }
+    var imprinterIncludeTime: Bool {
+        get { _settings.imprinterIncludeTime }
+        set { _settings.imprinterIncludeTime = newValue }
+    }
+    var imprinterIncludePageNumbers: Bool {
+        get { _settings.imprinterIncludePageNumbers }
+        set { _settings.imprinterIncludePageNumbers = newValue }
     }
 
     init() {

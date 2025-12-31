@@ -6,51 +6,112 @@
 //
 
 import SwiftUI
+#if os(macOS)
+import ImageCaptureCore
+#endif
 
 struct ControlPanelView: View {
     @Environment(AppState.self) private var appState
+    @State private var showingScannerSheet = false
 
     var body: some View {
         @Bindable var appState = appState
 
         VStack(spacing: 0) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                // Scanner Info
-                VStack(alignment: .leading, spacing: 8) {
-                    Label {
-                        Text("Scanner")
-                            .font(.headline)
-                    } icon: {
-                        Image(systemName: "scanner")
-                    }
-
-                    HStack {
-                        Text(appState.scannerManager.mockScannerName)
-                            .foregroundStyle(.secondary)
-
-                        Spacer()
-
-                        Circle()
-                            .fill(appState.scannerManager.connectionState.isConnected ? .green : .gray)
-                            .frame(width: 8, height: 8)
-                        Text(appState.scannerManager.connectionState.isConnected ? "Ready" : "Not Connected")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(.leading)
-
-                    if !appState.scannerManager.connectionState.isConnected && !appState.useMockScanner {
-                        Button {
-                            Task {
-                                await appState.scannerManager.discoverScanners()
-                            }
-                        } label: {
-                            Label("Connect Scanner", systemImage: "link")
+            ScrollView(.vertical, showsIndicators: true) {
+                VStack(alignment: .leading, spacing: 16) {
+                    // Scanner Info
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label {
+                            Text("Scanner")
+                                .font(.headline)
+                        } icon: {
+                            Image(systemName: "scanner")
                         }
-                        .buttonStyle(.bordered)
+
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                #if os(macOS)
+                                if let scanner = appState.scannerManager.selectedScanner {
+                                    Text(scanner.name ?? "Unknown Scanner")
+                                        .font(.subheadline)
+                                } else {
+                                    Text("No scanner selected")
+                                        .font(.subheadline)
+                                        .foregroundStyle(.secondary)
+                                }
+                                #endif
+                                Text(appState.scannerManager.connectionState.description)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            Spacer()
+
+                            Circle()
+                                .fill(appState.scannerManager.connectionState.isConnected ? .green : .gray)
+                                .frame(width: 8, height: 8)
+                        }
+
+                        #if os(macOS)
+                        // Available scanners list
+                        if !appState.scannerManager.availableScanners.isEmpty {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Available Scanners:")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+
+                                ForEach(appState.scannerManager.availableScanners, id: \.self) { scanner in
+                                    Button {
+                                        Task {
+                                            try? await appState.scannerManager.connect(to: scanner)
+                                        }
+                                    } label: {
+                                        HStack {
+                                            Image(systemName: "scanner")
+                                            Text(scanner.name ?? "Unknown")
+                                                .lineLimit(1)
+                                            Spacer()
+                                            if scanner == appState.scannerManager.selectedScanner {
+                                                Image(systemName: "checkmark.circle.fill")
+                                                    .foregroundStyle(.green)
+                                            }
+                                        }
+                                        .padding(.vertical, 4)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                            .padding(.leading)
+                        }
+                        #endif
+
+                        HStack {
+                            Button {
+                                Task {
+                                    await appState.scannerManager.discoverScanners()
+                                }
+                            } label: {
+                                Label(
+                                    appState.scannerManager.connectionState == .discovering ? "Searching..." : "Find Scanners",
+                                    systemImage: "magnifyingglass"
+                                )
+                            }
+                            .buttonStyle(.bordered)
+                            .disabled(appState.scannerManager.connectionState == .discovering)
+
+                            if appState.scannerManager.connectionState.isConnected {
+                                Button {
+                                    Task {
+                                        await appState.scannerManager.disconnect()
+                                    }
+                                } label: {
+                                    Label("Disconnect", systemImage: "xmark.circle")
+                                }
+                                .buttonStyle(.bordered)
+                            }
+                        }
                     }
-                }
 
                 Divider()
 
@@ -180,22 +241,19 @@ struct ControlPanelView: View {
                 // Scan Button
                 Button {
                     Task {
-                        if appState.scannerManager.connectionState.isConnected || appState.useMockScanner {
-                            await appState.startScanning()
-                        } else {
-                            await appState.scannerManager.connectMockScanner()
-                        }
+                        appState.addToQueue(preset: appState.currentPreset, count: 1)
+                        await appState.startScanning()
                     }
                 } label: {
                     Label(
-                        appState.isScanning ? "Scanning..." : "Scan Photos",
+                        appState.isScanning ? "Scanning..." : "Scan",
                         systemImage: appState.isScanning ? "stop.circle.fill" : "play.circle.fill"
                     )
                     .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
-                .disabled(appState.isScanning)
+                .disabled(appState.isScanning || (!appState.scannerManager.connectionState.isConnected && !appState.useMockScanner))
                 }
                 .padding()
             }

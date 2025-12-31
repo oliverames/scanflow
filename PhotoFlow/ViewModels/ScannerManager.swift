@@ -6,10 +6,14 @@
 //
 
 import Foundation
+import os.log
 #if os(macOS)
 import ImageCaptureCore
 import AppKit
 #endif
+
+/// Logging subsystem for ScanFlow
+private let logger = Logger(subsystem: "com.scanflow.app", category: "ScannerManager")
 
 enum ConnectionState: Equatable {
     case disconnected
@@ -72,51 +76,73 @@ class ScannerManager: NSObject {
 
     #if os(macOS)
     private func setupDeviceBrowser() {
+        logger.info("Setting up device browser for scanner discovery")
         deviceBrowser = ICDeviceBrowser()
         deviceBrowser?.delegate = self
         deviceBrowser?.browsedDeviceTypeMask = ICDeviceTypeMask.scanner
+        logger.info("Device browser configured with scanner mask")
     }
 
     func discoverScanners() async {
+        logger.info("Starting scanner discovery...")
         connectionState = .discovering
 
         // Clear previous scanners
         availableScanners.removeAll()
 
+        // Ensure device browser is set up
+        if deviceBrowser == nil {
+            logger.warning("Device browser was nil, setting up again")
+            setupDeviceBrowser()
+        }
+
+        logger.info("Starting device browser...")
         deviceBrowser?.start()
 
         // Wait for discovery to complete (give it 5 seconds)
+        logger.info("Waiting 5 seconds for scanner discovery...")
         try? await Task.sleep(for: .seconds(5))
 
         // Update state based on results
+        logger.info("Discovery complete. Found \(self.availableScanners.count) scanner(s)")
         if availableScanners.isEmpty {
+            logger.warning("No scanners found")
             connectionState = .disconnected
         } else {
+            for scanner in availableScanners {
+                logger.info("Found scanner: \(scanner.name ?? "Unknown")")
+            }
             connectionState = .disconnected
         }
     }
 
     func connect(to scanner: ICScannerDevice) async throws {
+        logger.info("Connecting to scanner: \(scanner.name ?? "Unknown")")
         connectionState = .connecting
         selectedScanner = scanner
 
         scanner.delegate = self
+        logger.info("Requesting open session...")
         try await scanner.requestOpenSession()
 
         // Wait for connection
         try await Task.sleep(for: .seconds(1))
 
         if scanner.hasOpenSession {
+            logger.info("Successfully connected to scanner")
             connectionState = .connected
         } else {
+            logger.error("Failed to open scanner session")
             throw ScannerError.connectionFailed
         }
     }
 
     func connectMockScanner() async {
+        logger.info("Connecting to mock scanner...")
         connectionState = .connecting
         try? await Task.sleep(for: .seconds(1))
         connectionState = .connected
+        logger.info("Mock scanner connected")
     }
 
     func disconnect() async {
@@ -258,8 +284,10 @@ extension ScannerManager: ICDeviceBrowserDelegate {
     nonisolated func deviceBrowser(_ browser: ICDeviceBrowser, didAdd device: ICDevice, moreComing: Bool) {
         if let scanner = device as? ICScannerDevice {
             Task { @MainActor in
+                logger.info("Device browser found scanner: \(scanner.name ?? "Unknown"), moreComing: \(moreComing)")
                 availableScanners.append(scanner)
                 if !moreComing {
+                    logger.info("Scanner discovery complete, found \(self.availableScanners.count) scanner(s)")
                     connectionState = .disconnected
                 }
             }
@@ -269,6 +297,7 @@ extension ScannerManager: ICDeviceBrowserDelegate {
     nonisolated func deviceBrowser(_ browser: ICDeviceBrowser, didRemove device: ICDevice, moreGoing: Bool) {
         if let scanner = device as? ICScannerDevice {
             Task { @MainActor in
+                logger.info("Scanner removed: \(scanner.name ?? "Unknown")")
                 availableScanners.removeAll { $0 == scanner }
             }
         }
@@ -276,6 +305,7 @@ extension ScannerManager: ICDeviceBrowserDelegate {
 
     nonisolated func deviceBrowser(_ browser: ICDeviceBrowser, didEncounterError error: Error) {
         Task { @MainActor in
+            logger.error("Device browser error: \(error.localizedDescription)")
             connectionState = .error(error.localizedDescription)
             lastError = error.localizedDescription
         }
