@@ -18,13 +18,13 @@ struct MainWindow: View {
         @Bindable var appState = appState
 
         mainContentView
-            .frame(minWidth: 900, minHeight: 600)
+            .frame(minWidth: 780, minHeight: 600)
             .sheet(isPresented: $appState.showScannerSelection) {
                 ScannerSelectionView(hasSelectedScanner: .init(
                     get: { !appState.showScannerSelection },
                     set: { if $0 { appState.showScannerSelection = false } }
                 ))
-                .frame(width: 420, height: 340)
+                .frame(minWidth: 380, idealWidth: 450, minHeight: 320, idealHeight: 400)
                 .interactiveDismissDisabled(!appState.scannerManager.connectionState.isConnected && !appState.useMockScanner)
             }
             .alert("Error", isPresented: $appState.showingAlert) {

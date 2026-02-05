@@ -77,7 +77,7 @@ struct ControlPanelView: View {
             }
             .padding(16)
         }
-        .frame(width: 300)
+        .frame(minWidth: 280, idealWidth: 320, maxWidth: 380)
     }
 
     // MARK: - Filing Tab

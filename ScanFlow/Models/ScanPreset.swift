@@ -202,13 +202,18 @@ struct ScanPreset: Identifiable, Codable, Equatable {
     var useDuplex: Bool
     var rotateEvenPages: Bool // Rotate every second page by 180°
     var splitBookPages: Bool
+    
+    // Document separation settings (for batch ADF scanning)
+    var separationSettings: SeparationSettings
+    
+    // AI-assisted file naming settings
+    var namingSettings: NamingSettings
 
     // Legacy compatibility
     var autoEnhance: Bool { colorMode == .color }
     var useADF: Bool { source != .flatbed }
     var detectBlankPages: Bool { blankPageHandling != .keep }
-    var splitOnBarcode: Bool = false
-    var applyImprinter: Bool = false
+    var splitOnBarcode: Bool { separationSettings.useBarcodes }  // Integrated with DocumentSeparator
 
     init(
         id: UUID = UUID(),
@@ -277,7 +282,11 @@ struct ScanPreset: Identifiable, Codable, Equatable {
         invertColors: Bool = false,
         useDuplex: Bool = false,
         rotateEvenPages: Bool = false,
-        splitBookPages: Bool = false
+        splitBookPages: Bool = false,
+        // Document separation
+        separationSettings: SeparationSettings = .default,
+        // AI naming
+        namingSettings: NamingSettings = .default
     ) {
         self.id = id
         self.name = name
@@ -346,6 +355,10 @@ struct ScanPreset: Identifiable, Codable, Equatable {
         self.useDuplex = useDuplex
         self.rotateEvenPages = rotateEvenPages
         self.splitBookPages = splitBookPages
+        // Document separation
+        self.separationSettings = separationSettings
+        // AI naming
+        self.namingSettings = namingSettings
     }
 
     static let defaults: [ScanPreset] = [

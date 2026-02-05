@@ -24,6 +24,8 @@ struct SidebarView: View {
 
                     Text(section.rawValue)
                         .font(.body)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
                 }
                 .padding(.vertical, 8)
                 .padding(.horizontal, 4)

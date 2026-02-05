@@ -23,12 +23,17 @@ struct SettingsView: View {
                     Label("Scanner", systemImage: "scanner")
                 }
 
+            ProcessingSettings()
+                .tabItem {
+                    Label("Processing", systemImage: "wand.and.stars")
+                }
+
             AdvancedSettings()
                 .tabItem {
                     Label("Advanced", systemImage: "slider.horizontal.3")
                 }
         }
-        .frame(width: 500, height: 400)
+        .frame(minWidth: 500, idealWidth: 550, minHeight: 400, idealHeight: 500)
     }
 }
 
@@ -79,7 +84,7 @@ struct GeneralSettings: View {
     private var exampleFilename: String {
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = appState.fileNamingTemplate.replacingOccurrences(of: "###", with: "001")
-        return (try? dateFormatter.string(from: Date())) ?? "2024-12-30_001.jpg"
+        return dateFormatter.string(from: Date())
     }
 }
 
@@ -102,6 +107,30 @@ struct ScannerSettings: View {
             Section("Connection") {
                 Text("Available scanners will appear here")
                     .foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
+        .padding()
+    }
+}
+
+struct ProcessingSettings: View {
+    @Environment(AppState.self) private var appState
+
+    var body: some View {
+        @Bindable var appState = appState
+
+        Form {
+            Section {
+                AIRenamingSettingsView(settings: $appState.defaultNamingSettings)
+            } header: {
+                Label("AI-Assisted File Naming", systemImage: "sparkles")
+            }
+
+            Section {
+                DocumentSeparationSettingsView(settings: $appState.defaultSeparationSettings)
+            } header: {
+                Label("Document Separation", systemImage: "doc.on.doc")
             }
         }
         .formStyle(.grouped)

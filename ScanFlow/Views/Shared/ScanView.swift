@@ -23,10 +23,7 @@ struct ScanView: View {
 
             // Control Panel (Inspector style) - toggleable
             if appState.showScanSettings {
-                // Divider that goes edge-to-edge
-                Rectangle()
-                    .fill(Color(nsColor: .separatorColor))
-                    .frame(width: 1)
+                Divider()
 
                 ControlPanelView()
                     .background(Color(nsColor: .windowBackgroundColor))

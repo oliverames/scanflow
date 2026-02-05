@@ -82,6 +82,18 @@ class AppState {
         set { _settings.useMockScanner = newValue }
     }
 
+    // AI-assisted file naming settings (defaults for new presets)
+    var defaultNamingSettings: NamingSettings {
+        get { _settings.defaultNamingSettings }
+        set { _settings.defaultNamingSettings = newValue }
+    }
+
+    // Document separation settings (defaults for new presets)
+    var defaultSeparationSettings: SeparationSettings {
+        get { _settings.defaultSeparationSettings }
+        set { _settings.defaultSeparationSettings = newValue }
+    }
+
     init() {
         logger.info("AppState initializing...")
         loadPresets()

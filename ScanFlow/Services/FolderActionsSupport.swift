@@ -136,7 +136,7 @@ class FolderActionsSupport {
         )
 
         if let stream = fileSystemWatcher {
-            FSEventStreamScheduleWithRunLoop(stream, CFRunLoopGetCurrent(), CFRunLoopMode.defaultMode.rawValue)
+            FSEventStreamSetDispatchQueue(stream, DispatchQueue.main)
             FSEventStreamStart(stream)
         }
     }
@@ -220,6 +220,9 @@ class FolderActionsSupport {
                 imageData = bitmap.representation(using: .png, properties: [:])
             case .tiff:
                 imageData = tiffData
+            case .pdf, .compressedPDF:
+                // For PDF formats in folder actions, fall back to JPEG
+                imageData = bitmap.representation(using: .jpeg, properties: [.compressionFactor: profile.quality])
             }
 
             try? imageData?.write(to: outputFileURL)

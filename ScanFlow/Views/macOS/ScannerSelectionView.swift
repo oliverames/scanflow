@@ -109,7 +109,7 @@ struct ScannerSelectionView: View {
             .padding(.vertical, 8)
             .background(.bar)
         }
-        .frame(width: 400, height: 320)
+        .frame(minWidth: 360, idealWidth: 420, minHeight: 300, idealHeight: 360)
         .onAppear {
             logger.info("ScannerSelectionView appeared, starting scanner discovery")
             startAutoRefresh()

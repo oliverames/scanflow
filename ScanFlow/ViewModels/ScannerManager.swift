@@ -8,11 +8,11 @@
 import Foundation
 import os.log
 #if os(macOS)
-import ImageCaptureCore
+@preconcurrency import ImageCaptureCore
 import AppKit
 #endif
 
-/// Logging subsystem for ScanFlow
+/// Logging subsystem for ScanFlow scanner operations
 private let logger = Logger(subsystem: "com.scanflow.app", category: "ScannerManager")
 
 enum ConnectionState: Equatable {
@@ -782,6 +782,12 @@ extension ScannerManager: ICScannerDeviceDelegate {
 
     nonisolated func scannerDevice(_ scanner: ICScannerDevice, didScanTo url: URL) {
         print("📷 [ScannerManager] didScanTo URL: \(url.path)")
+        
+        // Capture scanner properties before the async closure to avoid Sendable warnings
+        let scannerResolution = scanner.selectedFunctionalUnit.resolution
+        let scannerName = scanner.name ?? "Unknown Scanner"
+        let scannerBitDepth = scanner.selectedFunctionalUnit.pixelDataType == .BW ? 1 : 8
+        
         // Image was scanned successfully - use DispatchQueue to avoid deadlocks
         DispatchQueue.main.async {
             print("📷 [ScannerManager] Loading image from: \(url.path)")
@@ -812,13 +818,13 @@ extension ScannerManager: ICScannerDeviceDelegate {
                 self.currentScanContinuation = nil
 
                 let metadata = ScanMetadata(
-                    resolution: scanner.selectedFunctionalUnit.resolution,
+                    resolution: scannerResolution,
                     colorSpace: "sRGB",
                     timestamp: Date(),
-                    scannerModel: scanner.name ?? "Unknown Scanner",
+                    scannerModel: scannerName,
                     width: Int(image.size.width),
                     height: Int(image.size.height),
-                    bitDepth: scanner.selectedFunctionalUnit.pixelDataType == .BW ? 1 : 8
+                    bitDepth: scannerBitDepth
                 )
 
                 let result = ScanResult(images: [image], metadata: metadata)
@@ -850,6 +856,11 @@ extension ScannerManager: ICScannerDeviceDelegate {
             print("📷 [ScannerManager] didCompleteScanWithError: no error")
         }
 
+        // Capture scanner properties before the async closure to avoid Sendable warnings
+        let scannerResolution = scanner.selectedFunctionalUnit.resolution
+        let scannerName = scanner.name ?? "Unknown Scanner"
+        let scannerBitDepth = scanner.selectedFunctionalUnit.pixelDataType == .BW ? 1 : 8
+
         DispatchQueue.main.async {
             print("📷 [ScannerManager] Processing completion, pages collected: \(self.scannedPages.count)")
 
@@ -872,13 +883,13 @@ extension ScannerManager: ICScannerDeviceDelegate {
 
                 let firstImage = pages[0]
                 let metadata = ScanMetadata(
-                    resolution: scanner.selectedFunctionalUnit.resolution,
+                    resolution: scannerResolution,
                     colorSpace: "sRGB",
                     timestamp: Date(),
-                    scannerModel: scanner.name ?? "Unknown Scanner",
+                    scannerModel: scannerName,
                     width: Int(firstImage.size.width),
                     height: Int(firstImage.size.height),
-                    bitDepth: scanner.selectedFunctionalUnit.pixelDataType == .BW ? 1 : 8
+                    bitDepth: scannerBitDepth
                 )
 
                 let result = ScanResult(images: pages, metadata: metadata)

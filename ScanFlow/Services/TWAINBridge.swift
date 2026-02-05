@@ -2,9 +2,10 @@
 //  TWAINBridge.swift
 //  ScanFlow
 //
-//  TWAIN protocol bridge for professional document scanners
+//  ⚠️ BETA FEATURE - TWAIN protocol bridge for professional document scanners
 //  Foundation/wrapper for native TWAIN integration (Epson Scan 2 driver)
 //
+//  STATUS: BETA - Not yet fully implemented. Falls back to ImageCaptureCore.
 //  NOTE: Full TWAIN support requires native C++ bridge or third-party SDK
 //  This file provides the Swift interface and falls back to ImageCaptureCore
 //
