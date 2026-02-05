@@ -21,6 +21,12 @@ A professional document scanning application for macOS built with SwiftUI and Im
 - De-screening for printed materials (moiré removal)
 - Image sharpening
 
+### AI & Automation
+- AI-assisted file naming (on-device FoundationModels; macOS 26+)
+- Document action suggestions (Calendar events and Contacts)
+- Intelligent document separation (blank pages, barcodes, content analysis)
+- Searchable PDF output with on-device OCR
+
 ### Output Formats
 - **PDF** - Uncompressed, full quality
 - **Compressed PDF** - JPEG-compressed pages for smaller file size
@@ -30,14 +36,17 @@ A professional document scanning application for macOS built with SwiftUI and Im
 
 ### Workflow
 - Queue-based batch scanning
-- Professional scan presets (8 built-in)
+- Professional scan presets (9 built-in)
 - Drag & drop export
 - Quick Look preview
 - Keyboard shortcuts
+- Background connection mode with menu bar controls
+- Start at login support (auto-enabled when background connection is enabled)
 
 ## Requirements
 
 - macOS 14.0+
+- macOS 26.0+ for AI-assisted file naming (FoundationModels)
 - Xcode 16.0+
 - Swift 5.9+
 
@@ -63,6 +72,10 @@ xcodebuild -scheme ScanFlow -configuration Debug build
 4. Use the Scan button to start scanning
 
 For testing without hardware, enable "Use mock scanner" in Settings.
+
+### Background Connection
+
+When closing the app with a connected scanner, ScanFlow can stay running without an open window so it is ready for document detection. When enabled, ScanFlow moves to the menu bar, hides its Dock icon, and can continue scanning when an allowed scanner appears (even if no scanner is connected yet). You can enable this in Settings > Scanner > Background Connection. Start at login is automatically enabled while background connection is on.
 
 ## Scan Settings Reference
 
@@ -169,6 +182,7 @@ These settings directly configure the scanner hardware via Apple's ImageCaptureC
 | Preset | Resolution | Format | Color | Source |
 |--------|------------|--------|-------|--------|
 | Color PDF | 300 DPI | PDF | Color | ADF |
+| Searchable PDF | 300 DPI | PDF + OCR | Color | ADF |
 | Gray PDF | 300 DPI | PDF | Grayscale | ADF |
 | B/W PDF | 300 DPI | PDF | B&W | ADF |
 | Color Copy | 300 DPI | JPEG | Color | Flatbed |

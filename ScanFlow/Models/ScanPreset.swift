@@ -125,6 +125,7 @@ struct ScanPreset: Identifiable, Codable, Equatable {
     var resolution: Int // DPI
     var format: ScanFormat
     var quality: Double // 0-1 for JPEG compression
+    var searchablePDF: Bool
     var colorMode: ColorMode
     var paperSize: ScanPaperSize
     var source: ScanSource
@@ -221,6 +222,7 @@ struct ScanPreset: Identifiable, Codable, Equatable {
         resolution: Int = 300,
         format: ScanFormat = .pdf,
         quality: Double = 0.85,
+        searchablePDF: Bool = false,
         colorMode: ColorMode = .color,
         paperSize: ScanPaperSize = .auto,
         source: ScanSource = .flatbed,
@@ -293,6 +295,7 @@ struct ScanPreset: Identifiable, Codable, Equatable {
         self.resolution = resolution
         self.format = format
         self.quality = quality
+        self.searchablePDF = searchablePDF
         self.colorMode = colorMode
         self.paperSize = paperSize
         self.source = source
@@ -371,6 +374,14 @@ struct ScanPreset: Identifiable, Codable, Equatable {
             source: .adfFront
         ),
         ScanPreset(
+            name: "Searchable PDF",
+            resolution: 300,
+            format: .pdf,
+            searchablePDF: true,
+            colorMode: .color,
+            source: .adfFront
+        ),
+        ScanPreset(
             name: "Gray PDF",
             resolution: 300,
             format: .pdf,
@@ -427,6 +438,6 @@ struct ScanPreset: Identifiable, Codable, Equatable {
     ]
 
     static let quickScan = defaults[0]
-    static let searchablePDF = defaults[0]
+    static let searchablePDF = defaults.first { $0.searchablePDF } ?? defaults[0]
     static let archiveQuality = defaults[7]
 }

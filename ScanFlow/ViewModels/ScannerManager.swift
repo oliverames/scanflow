@@ -64,6 +64,10 @@ class ScannerManager: NSObject {
     var lastError: String?
     var isScanning: Bool = false
     var availableSources: [ScanSource] = ScanSource.allCases // Default to all, updated when connected
+    #if os(macOS)
+    var onDeviceReady: ((ICDevice?) -> Void)?
+    var onScannerDiscovered: ((ICScannerDevice) -> Void)?
+    #endif
 
     // Mock data for initial testing
     var mockScannerName: String = "Epson FastFoto FF-680W"
@@ -78,7 +82,6 @@ class ScannerManager: NSObject {
 
     #if os(macOS)
     private func setupDeviceBrowser() {
-        print("🔧 [ScannerManager] Setting up device browser...")
         logger.info("Setting up device browser for scanner discovery")
 
         deviceBrowser = ICDeviceBrowser()
@@ -93,22 +96,21 @@ class ScannerManager: NSObject {
         let bluetoothMask = ICDeviceLocationTypeMask.bluetooth.rawValue
 
         let combinedMask = scannerTypeMask | localMask | sharedMask | bonjourMask | bluetoothMask
-        print("🔧 [ScannerManager] Combined device mask: \(combinedMask) (scanner=\(scannerTypeMask), local=\(localMask), shared=\(sharedMask), bonjour=\(bonjourMask), bluetooth=\(bluetoothMask))")
+        logger.debug("Combined device mask: \(combinedMask) (scanner=\(scannerTypeMask), local=\(localMask), shared=\(sharedMask), bonjour=\(bonjourMask), bluetooth=\(bluetoothMask))")
 
         if let mask = ICDeviceTypeMask(rawValue: combinedMask) {
             deviceBrowser?.browsedDeviceTypeMask = mask
-            print("🔧 [ScannerManager] Device browser mask set successfully")
+            logger.debug("Device browser mask set successfully")
         } else {
-            print("❌ [ScannerManager] Failed to create device type mask!")
+            logger.error("Failed to create device type mask")
         }
 
-        print("🔧 [ScannerManager] Device browser delegate: \(String(describing: deviceBrowser?.delegate))")
+        logger.debug("Device browser delegate configured: \(self.deviceBrowser?.delegate != nil)")
         logger.info("Device browser configured for local, shared, bonjour, and bluetooth scanners (mask: \(combinedMask))")
     }
 
     func discoverScanners() async {
-        print("🔍 [ScannerManager] discoverScanners() called")
-        logger.info("Starting scanner discovery...")
+        logger.info("Starting scanner discovery")
 
         // Only change to discovering state if we're not already connected
         if !connectionState.isConnected {
@@ -117,7 +119,6 @@ class ScannerManager: NSObject {
 
         // Ensure device browser is set up
         if deviceBrowser == nil {
-            print("⚠️ [ScannerManager] Device browser was nil, setting up again")
             logger.warning("Device browser was nil, setting up again")
             setupDeviceBrowser()
         }
@@ -125,22 +126,21 @@ class ScannerManager: NSObject {
         // Start browsing if not already
         let isBrowsing = deviceBrowser?.isBrowsing ?? false
         if !isBrowsing {
-            print("🔍 [ScannerManager] Starting device browser...")
+            logger.debug("Starting device browser")
             deviceBrowser?.start()
         } else {
-            print("🔍 [ScannerManager] Device browser already running")
+            logger.debug("Device browser already running")
         }
 
         // Wait for discovery - delegates will populate the list
-        print("🔍 [ScannerManager] Waiting 3 seconds for scanner discovery...")
+        logger.debug("Waiting 3 seconds for scanner discovery")
         try? await Task.sleep(for: .seconds(3))
 
         // Log results
-        print("🔍 [ScannerManager] Discovery complete. Found \(self.availableScanners.count) scanner(s)")
         logger.info("Discovery complete. Found \(self.availableScanners.count) scanner(s)")
 
         for scanner in availableScanners {
-            print("✅ [ScannerManager] Available: \(scanner.name ?? "Unknown")")
+            logger.debug("Available scanner: \(scanner.name ?? "Unknown")")
         }
 
         // Only set to disconnected if we're still in discovering state
@@ -151,48 +151,46 @@ class ScannerManager: NSObject {
 
     /// Start continuous browsing - call once at app launch
     func startBrowsing() {
-        print("🔍 [ScannerManager] startBrowsing() called")
+        logger.debug("startBrowsing called")
         if deviceBrowser == nil {
             setupDeviceBrowser()
         }
         if !(deviceBrowser?.isBrowsing ?? false) {
-            print("🔍 [ScannerManager] Starting device browser...")
+            logger.debug("Starting device browser")
             deviceBrowser?.start()
-            print("🔍 [ScannerManager] Device browser started, isBrowsing: \(deviceBrowser?.isBrowsing ?? false)")
+            logger.debug("Device browser started, isBrowsing: \(self.deviceBrowser?.isBrowsing ?? false)")
         }
     }
 
     /// Stop browsing
     func stopBrowsing() {
-        print("🔍 [ScannerManager] stopBrowsing() called")
+        logger.debug("stopBrowsing called")
         deviceBrowser?.stop()
     }
 
     func connect(to scanner: ICScannerDevice) async throws {
-        print("🔌 [ScannerManager] Connecting to scanner: \(scanner.name ?? "Unknown")")
-        print("🔌 [ScannerManager] Scanner type: \(scanner.usbLocationID != 0 ? "USB" : "Network")")
-        logger.info("Connecting to scanner: \(scanner.name ?? "Unknown")")
+        let scannerType = scanner.usbLocationID != 0 ? "USB" : "Network"
+        logger.info("Connecting to scanner: \(scanner.name ?? "Unknown") (type: \(scannerType))")
         connectionState = .connecting
         selectedScanner = scanner
 
         scanner.delegate = self
 
-        print("🔌 [ScannerManager] Scanner hasOpenSession before: \(scanner.hasOpenSession)")
+        logger.debug("Scanner hasOpenSession: \(scanner.hasOpenSession)")
 
         // If already has open session, we're good
         if scanner.hasOpenSession {
-            print("✅ [ScannerManager] Scanner already has open session!")
+            logger.info("Scanner already has open session")
             connectionState = .connected
             return
         }
 
-        print("🔌 [ScannerManager] Requesting open session...")
-        logger.info("Requesting open session...")
+        logger.info("Requesting open session")
 
         // Try up to 3 times with delays
         var lastError: Error?
         for attempt in 1...3 {
-            print("🔌 [ScannerManager] Connection attempt \(attempt)/3...")
+            logger.debug("Connection attempt \(attempt)/3")
 
             do {
                 // Use continuation with timeout to properly wait for the delegate callback
@@ -201,7 +199,7 @@ class ScannerManager: NSObject {
                         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
                             // Set continuation BEFORE requesting session
                             self.connectionContinuation = continuation
-                            print("🔌 [ScannerManager] Continuation set, calling requestOpenSession...")
+                            logger.debug("Continuation set, calling requestOpenSession")
                             // Request open session - the result comes via delegate callback
                             scanner.requestOpenSession()
                         }
@@ -218,28 +216,26 @@ class ScannerManager: NSObject {
                     group.cancelAll()
                 }
 
-                print("✅ [ScannerManager] Successfully connected on attempt \(attempt)!")
-                logger.info("Successfully connected to scanner")
+                logger.info("Successfully connected on attempt \(attempt)")
                 connectionState = .connected
                 // Update available sources based on scanner capabilities
                 updateAvailableSources()
                 return
 
             } catch {
-                print("❌ [ScannerManager] Attempt \(attempt) failed: \(error)")
+                logger.warning("Connection attempt \(attempt) failed: \(error.localizedDescription)")
                 lastError = error
                 connectionContinuation = nil
 
                 if attempt < 3 {
-                    print("🔌 [ScannerManager] Waiting 3 seconds before retry...")
+                    logger.debug("Waiting 3 seconds before retry")
                     try? await Task.sleep(for: .seconds(3))
                 }
             }
         }
 
         // All attempts failed
-        print("❌ [ScannerManager] All connection attempts failed")
-        logger.error("Failed to connect after 3 attempts: \(lastError?.localizedDescription ?? "unknown error")")
+        logger.error("All connection attempts failed: \(lastError?.localizedDescription ?? "unknown error")")
         connectionState = .error(lastError?.localizedDescription ?? "Connection failed")
         selectedScanner = nil
         throw lastError ?? ScannerError.connectionFailed
@@ -272,12 +268,12 @@ class ScannerManager: NSObject {
         var sources: [ScanSource] = []
         let unitTypes = scanner.availableFunctionalUnitTypes
 
-        print("📷 [ScannerManager] Scanner functional units: \(unitTypes)")
+        logger.debug("Scanner functional units: \(unitTypes)")
 
         // Check for flatbed - always put first if available (preferred default)
         if unitTypes.contains(NSNumber(value: ICScannerFunctionalUnitType.flatbed.rawValue)) {
             sources.append(.flatbed)
-            print("📷 [ScannerManager] Flatbed available (preferred default)")
+            logger.debug("Flatbed available (preferred default)")
         }
 
         // Check for document feeder
@@ -287,20 +283,20 @@ class ScannerManager: NSObject {
             if let fu = scanner.selectedFunctionalUnit as? ICScannerFunctionalUnitDocumentFeeder,
                fu.supportsDuplexScanning {
                 sources.append(.adfDuplex)
-                print("📷 [ScannerManager] ADF with duplex available")
+                logger.debug("ADF with duplex available")
             } else {
-                print("📷 [ScannerManager] ADF (simplex only) available")
+                logger.debug("ADF (simplex only) available")
             }
         }
 
         // If no sources found, default to all (fallback)
         if sources.isEmpty {
-            print("⚠️ [ScannerManager] No functional units detected, defaulting to all sources")
+            logger.warning("No functional units detected, defaulting to all sources")
             sources = ScanSource.allCases
         }
 
         availableSources = sources
-        print("📷 [ScannerManager] Available sources: \(sources.map { $0.rawValue })")
+        logger.debug("Available sources: \(sources.map { $0.rawValue })")
     }
 
     func disconnect() async {
@@ -312,11 +308,10 @@ class ScannerManager: NSObject {
     }
 
     func scan(with preset: ScanPreset) async throws -> ScanResult {
-        print("📷 [ScannerManager] scan() called with preset: \(preset.name)")
         logger.info("Starting scan with preset: \(preset.name)")
 
         guard connectionState.isConnected || useMockScanner else {
-            print("❌ [ScannerManager] Not connected!")
+            logger.error("Scan requested but not connected")
             throw ScannerError.notConnected
         }
 
@@ -325,12 +320,16 @@ class ScannerManager: NSObject {
 
         defer {
             isScanning = false
-            connectionState = .connected
+            if case .error = connectionState {
+                // Preserve error state
+            } else {
+                connectionState = selectedScanner == nil ? .disconnected : .connected
+            }
         }
 
         // Use mock scanner if enabled
         if useMockScanner {
-            print("📷 [ScannerManager] Using mock scanner")
+            logger.debug("Using mock scanner")
             try await Task.sleep(for: .seconds(3))
             let mockImage = createMockImage()
             let metadata = ScanMetadata(
@@ -349,37 +348,40 @@ class ScannerManager: NSObject {
 
         // Real scanner workflow
         guard let scanner = selectedScanner else {
-            print("❌ [ScannerManager] No scanner selected!")
+            logger.error("No scanner selected")
             throw ScannerError.notConnected
         }
 
-        print("📷 [ScannerManager] Scanner: \(scanner.name ?? "Unknown")")
-        print("📷 [ScannerManager] Has open session: \(scanner.hasOpenSession)")
+        logger.debug("Scanner: \(scanner.name ?? "Unknown"), hasOpenSession: \(scanner.hasOpenSession)")
 
         // Ensure session is open
         if !scanner.hasOpenSession {
-            print("⚠️ [ScannerManager] Session not open, reconnecting...")
+            logger.warning("Session not open, reconnecting")
             try await connect(to: scanner)
         }
 
         // Set up transfer mode - file-based to get scanned images as files
         scanner.transferMode = .fileBased
-        print("📷 [ScannerManager] Transfer mode set to file-based")
+        logger.debug("Transfer mode set to file-based")
 
         // Set downloads directory
         let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent("ScanFlow", isDirectory: true)
-        try? FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        do {
+            try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        } catch {
+            logger.warning("Failed to create temp directory: \(error.localizedDescription)")
+        }
         scanner.downloadsDirectory = tempDir
-        print("📷 [ScannerManager] Downloads directory: \(tempDir.path)")
+        logger.debug("Downloads directory: \(tempDir.path)")
 
         // Check available functional units
-        print("📷 [ScannerManager] Available functional units: \(scanner.availableFunctionalUnitTypes)")
+        logger.debug("Available functional units: \(scanner.availableFunctionalUnitTypes)")
 
         // Determine desired functional unit based on preset source
         let hasFlatbed = scanner.availableFunctionalUnitTypes.contains(NSNumber(value: ICScannerFunctionalUnitType.flatbed.rawValue))
         let hasDocumentFeeder = scanner.availableFunctionalUnitTypes.contains(NSNumber(value: ICScannerFunctionalUnitType.documentFeeder.rawValue))
-        print("📷 [ScannerManager] Scanner capabilities - Flatbed: \(hasFlatbed), Document Feeder: \(hasDocumentFeeder)")
-        print("📷 [ScannerManager] Preset source: \(preset.source.rawValue)")
+        logger.debug("Scanner capabilities - Flatbed: \(hasFlatbed), Document Feeder: \(hasDocumentFeeder)")
+        logger.debug("Preset source: \(preset.source.rawValue)")
 
         // Select the appropriate functional unit based on preset source
         var desiredUnitType: ICScannerFunctionalUnitType
@@ -388,7 +390,7 @@ class ScannerManager: NSObject {
             if hasFlatbed {
                 desiredUnitType = .flatbed
             } else if hasDocumentFeeder {
-                print("⚠️ [ScannerManager] Flatbed requested but not available, falling back to document feeder")
+                logger.warning("Flatbed requested but not available, falling back to document feeder")
                 desiredUnitType = .documentFeeder
             } else {
                 throw ScannerError.noFunctionalUnit
@@ -397,40 +399,40 @@ class ScannerManager: NSObject {
             if hasDocumentFeeder {
                 desiredUnitType = .documentFeeder
             } else if hasFlatbed {
-                print("⚠️ [ScannerManager] Document feeder requested but not available, falling back to flatbed")
+                logger.warning("Document feeder requested but not available, falling back to flatbed")
                 desiredUnitType = .flatbed
             } else {
                 throw ScannerError.noFunctionalUnit
             }
         }
-        print("📷 [ScannerManager] Requesting functional unit type: \(desiredUnitType.rawValue)")
+        logger.debug("Requesting functional unit type: \(desiredUnitType.rawValue)")
 
         // Get functional unit - wait for it to be ready
         var selectedUnit = scanner.selectedFunctionalUnit
-        print("📷 [ScannerManager] Initial functional unit type: \(selectedUnit.type.rawValue)")
+        logger.debug("Initial functional unit type: \(selectedUnit.type.rawValue)")
 
         // Select the desired unit if it's different from current
         if selectedUnit.type != desiredUnitType || selectedUnit.supportedResolutions.isEmpty {
-            print("📷 [ScannerManager] Selecting functional unit: \(desiredUnitType.rawValue)...")
+            logger.debug("Selecting functional unit: \(desiredUnitType.rawValue)")
             scanner.requestSelect(desiredUnitType)
 
             // Wait for selection with polling
             for attempt in 1...10 {
                 try await Task.sleep(for: .milliseconds(500))
                 selectedUnit = scanner.selectedFunctionalUnit
-                print("📷 [ScannerManager] Attempt \(attempt): type=\(selectedUnit.type.rawValue), resolutions=\(selectedUnit.supportedResolutions)")
+                logger.debug("Selection attempt \(attempt): type=\(selectedUnit.type.rawValue), resolutions=\(selectedUnit.supportedResolutions)")
                 if selectedUnit.type == desiredUnitType && !selectedUnit.supportedResolutions.isEmpty {
                     break
                 }
             }
 
             if selectedUnit.supportedResolutions.isEmpty {
-                print("❌ [ScannerManager] Still no valid functional unit after selection!")
+                logger.error("No valid functional unit after selection")
                 throw ScannerError.noFunctionalUnit
             }
         }
-        print("📷 [ScannerManager] Functional unit type: \(selectedUnit.type.rawValue)")
-        print("📷 [ScannerManager] Supported resolutions: \(selectedUnit.supportedResolutions)")
+        logger.debug("Functional unit type: \(selectedUnit.type.rawValue)")
+        logger.debug("Supported resolutions: \(selectedUnit.supportedResolutions)")
 
         // Apply preset settings to scanner
         configureScannerSettings(selectedUnit, with: preset)
@@ -438,7 +440,6 @@ class ScannerManager: NSObject {
         // Wait a moment for settings to apply
         try await Task.sleep(for: .milliseconds(200))
 
-        print("📷 [ScannerManager] Requesting scan...")
         logger.info("Requesting scan from scanner")
 
         // Prepare for multi-page scan if using document feeder
@@ -452,7 +453,7 @@ class ScannerManager: NSObject {
                     Task { @MainActor in
                         self.currentScanContinuation = continuation
                         scanner.requestScan()
-                        print("📷 [ScannerManager] requestScan() called, waiting for delegate callback... (multiPage: \(self.isMultiPageScan))")
+                        logger.debug("requestScan() called, waiting for delegate callback (multiPage: \(self.isMultiPageScan))")
                     }
                 }
             }
@@ -473,22 +474,22 @@ class ScannerManager: NSObject {
     }
 
     private func configureScannerSettings(_ functionalUnit: ICScannerFunctionalUnit, with preset: ScanPreset) {
-        print("📷 [ScannerManager] Configuring scanner settings...")
-        print("📷 [ScannerManager] Supported resolutions: \(functionalUnit.supportedResolutions)")
-        print("📷 [ScannerManager] Supported bit depths: \(functionalUnit.supportedBitDepths)")
-        print("📷 [ScannerManager] Physical size: \(functionalUnit.physicalSize)")
+        logger.debug("Configuring scanner settings")
+        logger.debug("Supported resolutions: \(functionalUnit.supportedResolutions)")
+        logger.debug("Supported bit depths: \(functionalUnit.supportedBitDepths)")
+        logger.debug("Physical size: \(functionalUnit.physicalSize.width)x\(functionalUnit.physicalSize.height)")
 
         // Set resolution - use supported resolution closest to preset
         let supportedResolutions = Array(functionalUnit.supportedResolutions)
         if supportedResolutions.contains(preset.resolution) {
             functionalUnit.resolution = preset.resolution
-            print("📷 [ScannerManager] Using preset resolution: \(preset.resolution) DPI")
+            logger.debug("Using preset resolution: \(preset.resolution) DPI")
         } else if !supportedResolutions.isEmpty {
             let closestResolution = supportedResolutions.min(by: { abs($0 - preset.resolution) < abs($1 - preset.resolution) }) ?? supportedResolutions[0]
             functionalUnit.resolution = closestResolution
-            print("📷 [ScannerManager] Preset resolution \(preset.resolution) not supported, using \(closestResolution) DPI")
+            logger.debug("Preset resolution \(preset.resolution) not supported, using \(closestResolution) DPI")
         } else {
-            print("⚠️ [ScannerManager] No supported resolutions found, using default")
+            logger.warning("No supported resolutions found, using default")
         }
 
         // Set bit depth based on preset
@@ -496,26 +497,26 @@ class ScannerManager: NSObject {
         let desiredBitDepth = preset.bitDepth.rawValue
         if supportedBitDepths.contains(desiredBitDepth) {
             functionalUnit.bitDepth = ICScannerBitDepth(rawValue: UInt(desiredBitDepth)) ?? .depth8Bits
-            print("📷 [ScannerManager] Using bit depth: \(desiredBitDepth)-bit")
+            logger.debug("Using bit depth: \(desiredBitDepth)-bit")
         } else if supportedBitDepths.contains(8) {
             functionalUnit.bitDepth = .depth8Bits
-            print("📷 [ScannerManager] Preset bit depth \(desiredBitDepth) not supported, using 8-bit")
+            logger.debug("Preset bit depth \(desiredBitDepth) not supported, using 8-bit")
         } else {
-            print("⚠️ [ScannerManager] No supported bit depths found")
+            logger.warning("No supported bit depths found")
         }
 
         // Set pixel data type based on preset colorMode
-        print("📷 [ScannerManager] Preset color mode: \(preset.colorMode.rawValue)")
+        logger.debug("Preset color mode: \(preset.colorMode.rawValue)")
         switch preset.colorMode {
         case .color:
             functionalUnit.pixelDataType = .RGB
-            print("📷 [ScannerManager] Set pixel type to RGB (Color)")
+            logger.debug("Set pixel type to RGB (Color)")
         case .grayscale:
             functionalUnit.pixelDataType = .gray
-            print("📷 [ScannerManager] Set pixel type to Gray")
+            logger.debug("Set pixel type to Gray")
         case .blackWhite:
             functionalUnit.pixelDataType = .BW
-            print("📷 [ScannerManager] Set pixel type to B&W")
+            logger.debug("Set pixel type to B&W")
         }
 
         // Set scan area - either custom or full physical size
@@ -553,28 +554,28 @@ class ScannerManager: NSObject {
 
             let scanRect = NSRect(x: x, y: y, width: width, height: height)
             functionalUnit.scanArea = scanRect
-            print("📷 [ScannerManager] Custom scan area set to: \(scanRect)")
+            logger.debug("Custom scan area set to: x=\(scanRect.origin.x), y=\(scanRect.origin.y), w=\(scanRect.width), h=\(scanRect.height)")
         } else if physicalSize.width > 0 && physicalSize.height > 0 {
             functionalUnit.scanArea = NSRect(origin: .zero, size: physicalSize)
-            print("📷 [ScannerManager] Scan area set to full size: \(functionalUnit.scanArea)")
+            logger.debug("Scan area set to full size: \(functionalUnit.scanArea.width)x\(functionalUnit.scanArea.height)")
         } else {
-            print("⚠️ [ScannerManager] Invalid physical size, using default scan area")
+            logger.warning("Invalid physical size, using default scan area")
         }
 
         // Configure document feeder if available
         if let documentFeeder = functionalUnit as? ICScannerFunctionalUnitDocumentFeeder {
-            print("📷 [ScannerManager] Configuring document feeder")
+            logger.debug("Configuring document feeder")
             documentFeeder.documentType = .typeDefault
 
             // Enable duplex if requested and supported
             let wantsDuplex = preset.source == .adfDuplex || preset.useDuplex
-            print("📷 [ScannerManager] Duplex support: \(documentFeeder.supportsDuplexScanning)")
+            logger.debug("Duplex support: \(documentFeeder.supportsDuplexScanning)")
             if wantsDuplex && documentFeeder.supportsDuplexScanning {
                 documentFeeder.duplexScanningEnabled = true
-                print("📷 [ScannerManager] Duplex scanning ENABLED")
+                logger.debug("Duplex scanning enabled")
             } else {
                 documentFeeder.duplexScanningEnabled = false
-                print("📷 [ScannerManager] Duplex scanning disabled")
+                logger.debug("Duplex scanning disabled")
             }
 
             // Set page orientation for odd pages using EXIF orientation values
@@ -588,7 +589,7 @@ class ScannerManager: NSObject {
             case .rotated270:
                 documentFeeder.oddPageOrientation = .orientation6  // 90 CCW
             }
-            print("📷 [ScannerManager] Odd page orientation: \(preset.oddPageOrientation.displayName)")
+            logger.debug("Odd page orientation: \(preset.oddPageOrientation.displayName)")
 
             // Set page orientation for even pages (duplex only)
             if documentFeeder.duplexScanningEnabled {
@@ -602,20 +603,20 @@ class ScannerManager: NSObject {
                 case .rotated270:
                     documentFeeder.evenPageOrientation = .orientation6
                 }
-                print("📷 [ScannerManager] Even page orientation: \(preset.evenPageOrientation.displayName)")
+                logger.debug("Even page orientation: \(preset.evenPageOrientation.displayName)")
             }
 
             // Note: reverseFeederPageOrder is read-only in ICC
-            print("📷 [ScannerManager] Reverse page order preference: \(preset.reverseFeederPageOrder) (read-only in ICC)")
+            logger.debug("Reverse page order preference: \(preset.reverseFeederPageOrder) (read-only in ICC)")
         }
 
         // Configure flatbed-specific settings
         if let flatbed = functionalUnit as? ICScannerFunctionalUnitFlatbed {
-            print("📷 [ScannerManager] Configuring flatbed")
+            logger.debug("Configuring flatbed")
             flatbed.documentType = .typeDefault
         }
 
-        print("📷 [ScannerManager] Final configuration - resolution: \(functionalUnit.resolution), pixelType: \(functionalUnit.pixelDataType.rawValue), bitDepth: \(functionalUnit.bitDepth.rawValue)")
+        logger.debug("Final configuration - resolution: \(functionalUnit.resolution), pixelType: \(functionalUnit.pixelDataType.rawValue), bitDepth: \(functionalUnit.bitDepth.rawValue)")
     }
 
     // Store continuation for async scanning
@@ -669,36 +670,32 @@ class ScannerManager: NSObject {
 // MARK: - ICDeviceBrowserDelegate
 extension ScannerManager: ICDeviceBrowserDelegate {
     nonisolated func deviceBrowser(_ browser: ICDeviceBrowser, didAdd device: ICDevice, moreComing: Bool) {
-        // Log ALL devices found for debugging
         let deviceType = device is ICScannerDevice ? "SCANNER" : "OTHER"
-        let locationDesc: String
-        if device.usbLocationID != 0 {
-            locationDesc = "USB"
-        } else {
-            locationDesc = "Network/Shared"
-        }
+        let locationDesc = device.usbLocationID != 0 ? "USB" : "Network/Shared"
 
-        print("🔍 [ICDeviceBrowser] Device found: \(device.name ?? "Unknown") | Type: \(deviceType) | Location: \(locationDesc) | moreComing: \(moreComing)")
+        logger.debug("Device found: \(device.name ?? "Unknown") | Type: \(deviceType) | Location: \(locationDesc) | moreComing: \(moreComing)")
 
         if let scanner = device as? ICScannerDevice {
             Task { @MainActor in
-                logger.info("✅ Scanner found: \(scanner.name ?? "Unknown"), location: \(locationDesc)")
-                print("✅ Adding scanner to list: \(scanner.name ?? "Unknown")")
+                logger.info("Scanner found: \(scanner.name ?? "Unknown"), location: \(locationDesc)")
                 if !self.availableScanners.contains(scanner) {
                     self.availableScanners.append(scanner)
                 }
+                self.onScannerDiscovered?(scanner)
                 if !moreComing {
                     logger.info("Scanner discovery batch complete, found \(self.availableScanners.count) scanner(s)")
-                    self.connectionState = .disconnected
+                    if case .discovering = self.connectionState {
+                        self.connectionState = .disconnected
+                    }
                 }
             }
         } else {
-            print("⚠️ Device is not a scanner: \(device.name ?? "Unknown")")
+            logger.debug("Device is not a scanner: \(device.name ?? "Unknown")")
         }
     }
 
     nonisolated func deviceBrowser(_ browser: ICDeviceBrowser, didRemove device: ICDevice, moreGoing: Bool) {
-        print("🗑️ [ICDeviceBrowser] Device removed: \(device.name ?? "Unknown")")
+        logger.debug("Device removed: \(device.name ?? "Unknown")")
         if let scanner = device as? ICScannerDevice {
             Task { @MainActor in
                 logger.info("Scanner removed: \(scanner.name ?? "Unknown")")
@@ -708,16 +705,15 @@ extension ScannerManager: ICDeviceBrowserDelegate {
     }
 
     nonisolated func deviceBrowser(_ browser: ICDeviceBrowser, didEncounterError error: Error) {
-        print("❌ [ICDeviceBrowser] Error: \(error.localizedDescription)")
+        logger.error("Device browser error: \(error.localizedDescription)")
         Task { @MainActor in
-            logger.error("Device browser error: \(error.localizedDescription)")
             self.connectionState = .error(error.localizedDescription)
             self.lastError = error.localizedDescription
         }
     }
 
     nonisolated func deviceBrowserDidEnumerateLocalDevices(_ browser: ICDeviceBrowser) {
-        print("📋 [ICDeviceBrowser] Finished enumerating LOCAL devices")
+        logger.debug("Finished enumerating local devices")
     }
 }
 
@@ -727,6 +723,7 @@ extension ScannerManager: ICScannerDeviceDelegate {
         if let scanner = device as? ICScannerDevice {
             Task { @MainActor in
                 if scanner == selectedScanner {
+                    logger.info("Selected scanner was removed")
                     selectedScanner = nil
                     connectionState = .disconnected
                 }
@@ -735,25 +732,24 @@ extension ScannerManager: ICScannerDeviceDelegate {
     }
 
     nonisolated func device(_ device: ICDevice, didOpenSessionWithError error: Error?) {
-        print("🔌 [ScannerManager] didOpenSessionWithError called, error: \(error?.localizedDescription ?? "none")")
+        logger.debug("didOpenSessionWithError called, error: \(error?.localizedDescription ?? "none")")
         // Resume the connection continuation synchronously to avoid deadlocks
-        // The continuation is already on the main actor context
         DispatchQueue.main.async {
             if let continuation = self.connectionContinuation {
                 self.connectionContinuation = nil
                 if let error = error {
-                    print("❌ [ScannerManager] Session open failed: \(error.localizedDescription)")
+                    logger.error("Session open failed: \(error.localizedDescription)")
                     self.connectionState = .error(error.localizedDescription)
                     self.lastError = error.localizedDescription
                     continuation.resume(throwing: error)
                 } else {
-                    print("✅ [ScannerManager] Session opened successfully via delegate!")
+                    logger.info("Session opened successfully")
                     self.connectionState = .connected
                     continuation.resume()
                 }
             } else {
-                print("⚠️ [ScannerManager] No connection continuation found, updating state directly")
-                // No continuation, just update state directly
+                logger.debug("No connection continuation found, updating state directly")
+                guard case .connecting = self.connectionState else { return }
                 if let error = error {
                     self.connectionState = .error(error.localizedDescription)
                     self.lastError = error.localizedDescription
@@ -765,6 +761,7 @@ extension ScannerManager: ICScannerDeviceDelegate {
     }
 
     nonisolated func device(_ device: ICDevice, didCloseSessionWithError error: Error?) {
+        logger.debug("Session closed, error: \(error?.localizedDescription ?? "none")")
         Task { @MainActor in
             connectionState = .disconnected
             selectedScanner = nil
@@ -772,7 +769,7 @@ extension ScannerManager: ICScannerDeviceDelegate {
     }
 
     nonisolated func scannerDevice(_ scanner: ICScannerDevice, didSelect functionalUnit: ICScannerFunctionalUnit, error: Error?) {
-        print("📷 [ScannerManager] didSelect functionalUnit: \(functionalUnit.type.rawValue), error: \(error?.localizedDescription ?? "none")")
+        logger.debug("didSelect functionalUnit: \(functionalUnit.type.rawValue), error: \(error?.localizedDescription ?? "none")")
         if let error = error {
             Task { @MainActor in
                 lastError = error.localizedDescription
@@ -781,7 +778,7 @@ extension ScannerManager: ICScannerDeviceDelegate {
     }
 
     nonisolated func scannerDevice(_ scanner: ICScannerDevice, didScanTo url: URL) {
-        print("📷 [ScannerManager] didScanTo URL: \(url.path)")
+        logger.debug("didScanTo URL: \(url.path)")
         
         // Capture scanner properties before the async closure to avoid Sendable warnings
         let scannerResolution = scanner.selectedFunctionalUnit.resolution
@@ -790,9 +787,9 @@ extension ScannerManager: ICScannerDeviceDelegate {
         
         // Image was scanned successfully - use DispatchQueue to avoid deadlocks
         DispatchQueue.main.async {
-            print("📷 [ScannerManager] Loading image from: \(url.path)")
+            logger.debug("Loading image from: \(url.path)")
             guard let image = NSImage(contentsOf: url) else {
-                print("❌ [ScannerManager] Failed to load image from URL")
+                logger.error("Failed to load image from URL")
                 if let continuation = self.currentScanContinuation {
                     self.currentScanContinuation = nil
                     continuation.resume(throwing: ScannerError.scanFailed)
@@ -800,19 +797,19 @@ extension ScannerManager: ICScannerDeviceDelegate {
                 return
             }
 
-            print("📷 [ScannerManager] Image loaded, size: \(image.size)")
+            logger.debug("Image loaded, size: \(image.size.width)x\(image.size.height)")
 
             // For multi-page scanning (ADF), collect pages until scan completes
             if self.isMultiPageScan {
                 self.scannedPages.append(image)
-                print("📷 [ScannerManager] Page \(self.scannedPages.count) collected, waiting for more pages...")
+                logger.debug("Page \(self.scannedPages.count) collected, waiting for more pages")
                 // Clean up temporary file
                 try? FileManager.default.removeItem(at: url)
                 // Don't resume continuation yet - wait for didCompleteScanWithError
             } else {
                 // Single page scan (flatbed) - resume immediately
                 guard let continuation = self.currentScanContinuation else {
-                    print("⚠️ [ScannerManager] No scan continuation to resume!")
+                    logger.warning("No scan continuation to resume")
                     return
                 }
                 self.currentScanContinuation = nil
@@ -828,7 +825,7 @@ extension ScannerManager: ICScannerDeviceDelegate {
                 )
 
                 let result = ScanResult(images: [image], metadata: metadata)
-                print("✅ [ScannerManager] Single-page scan completed successfully!")
+                logger.info("Single-page scan completed successfully")
                 continuation.resume(returning: result)
 
                 // Clean up temporary file
@@ -838,7 +835,7 @@ extension ScannerManager: ICScannerDeviceDelegate {
     }
 
     nonisolated func scannerDevice(_ scanner: ICScannerDevice, didCompleteOverviewScanWithError error: Error?) {
-        print("📷 [ScannerManager] didCompleteOverviewScanWithError: \(error?.localizedDescription ?? "none")")
+        logger.debug("didCompleteOverviewScanWithError: \(error?.localizedDescription ?? "none")")
         if let error = error {
             Task { @MainActor in
                 lastError = error.localizedDescription
@@ -849,11 +846,9 @@ extension ScannerManager: ICScannerDeviceDelegate {
     nonisolated func scannerDevice(_ scanner: ICScannerDevice, didCompleteScanWithError error: Error?) {
         if let error = error {
             let nsError = error as NSError
-            print("📷 [ScannerManager] didCompleteScanWithError: \(error.localizedDescription)")
-            print("📷 [ScannerManager] Error domain: \(nsError.domain), code: \(nsError.code)")
-            print("📷 [ScannerManager] Error userInfo: \(nsError.userInfo)")
+            logger.error("Scan completed with error: \(error.localizedDescription) (domain: \(nsError.domain), code: \(nsError.code))")
         } else {
-            print("📷 [ScannerManager] didCompleteScanWithError: no error")
+            logger.debug("Scan completed without error")
         }
 
         // Capture scanner properties before the async closure to avoid Sendable warnings
@@ -862,16 +857,16 @@ extension ScannerManager: ICScannerDeviceDelegate {
         let scannerBitDepth = scanner.selectedFunctionalUnit.pixelDataType == .BW ? 1 : 8
 
         DispatchQueue.main.async {
-            print("📷 [ScannerManager] Processing completion, pages collected: \(self.scannedPages.count)")
+            logger.debug("Processing completion, pages collected: \(self.scannedPages.count)")
 
             guard let continuation = self.currentScanContinuation else {
-                print("⚠️ [ScannerManager] No scan continuation for completion (already handled by didScanTo)")
+                logger.debug("No scan continuation for completion (already handled by didScanTo)")
                 return
             }
             self.currentScanContinuation = nil
 
             if let error = error {
-                print("❌ [ScannerManager] Scan failed: \(error.localizedDescription)")
+                logger.error("Scan failed: \(error.localizedDescription)")
                 self.lastError = error.localizedDescription
                 self.scannedPages = []
                 self.isMultiPageScan = false
@@ -879,7 +874,7 @@ extension ScannerManager: ICScannerDeviceDelegate {
             } else if self.isMultiPageScan && !self.scannedPages.isEmpty {
                 // Multi-page scan completed with pages - return all collected pages
                 let pages = self.scannedPages
-                print("✅ [ScannerManager] Multi-page scan completed with \(pages.count) page(s)")
+                logger.info("Multi-page scan completed with \(pages.count) page(s)")
 
                 let firstImage = pages[0]
                 let metadata = ScanMetadata(
@@ -898,7 +893,7 @@ extension ScannerManager: ICScannerDeviceDelegate {
                 continuation.resume(returning: result)
             } else {
                 // Single page scan without image received via didScanTo, or no pages collected
-                print("⚠️ [ScannerManager] Scan completed but no image(s) received")
+                logger.warning("Scan completed but no image(s) received")
                 self.scannedPages = []
                 self.isMultiPageScan = false
                 continuation.resume(throwing: ScannerError.scanFailed)
@@ -908,21 +903,17 @@ extension ScannerManager: ICScannerDeviceDelegate {
 
     // Progress tracking
     nonisolated func scannerDevice(_ scanner: ICScannerDevice, didScanTo data: ICScannerBandData) {
-        print("📷 [ScannerManager] didScanTo data band: \(data.dataSize) bytes, fullImageWidth: \(data.fullImageWidth), fullImageHeight: \(data.fullImageHeight)")
+        logger.debug("Scan data band: \(data.dataSize) bytes, fullImageWidth: \(data.fullImageWidth), fullImageHeight: \(data.fullImageHeight)")
     }
 
     // Status information delegate
     nonisolated func device(_ device: ICDevice, didReceiveStatusInformation status: [ICDeviceStatus : Any]) {
-        print("📊 [ScannerManager] Status update: \(status)")
-        // Log all status keys for debugging
-        for (key, value) in status {
-            print("📊 [ScannerManager] Status key: \(key), value: \(value)")
-        }
+        logger.debug("Status update received with \(status.count) entries")
     }
 
     // Error delegate
     nonisolated func device(_ device: ICDevice, didEncounterError error: Error?) {
-        print("❌ [ScannerManager] Device error: \(error?.localizedDescription ?? "unknown")")
+        logger.error("Device error: \(error?.localizedDescription ?? "unknown")")
         Task { @MainActor in
             if let error = error {
                 lastError = error.localizedDescription
@@ -937,7 +928,20 @@ extension ScannerManager: ICScannerDeviceDelegate {
 
     // Ready for scan
     nonisolated func deviceDidBecomeReady(_ device: ICDevice) {
-        print("✅ [ScannerManager] Device became ready: \(device.name ?? "Unknown")")
+        logger.info("Device became ready: \(device.name ?? "Unknown")")
+        Task { @MainActor in
+            self.onDeviceReady?(device)
+        }
+    }
+}
+#endif
+
+#if os(macOS)
+extension ICScannerDevice {
+    var scanflowIdentifier: String {
+        let name = self.name ?? "Unknown"
+        let transport = transportType ?? "unknown"
+        return "\(name)|\(usbLocationID)|\(transport)"
     }
 }
 #endif

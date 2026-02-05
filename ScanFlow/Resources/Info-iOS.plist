@@ -12,12 +12,16 @@
     <string>6.0</string>
     <key>CFBundleName</key>
     <string>ScanFlow</string>
+    <key>CFBundleDisplayName</key>
+    <string>ScanFlow</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
     <string>1.0</string>
     <key>CFBundleVersion</key>
     <string>1</string>
+    <key>NSHumanReadableCopyright</key>
+    <string>Copyright © 2026. All rights reserved.</string>
     <key>LSRequiresIPhoneOS</key>
     <true/>
     <key>UILaunchScreen</key>
@@ -26,6 +30,10 @@
     <string>ScanFlow needs access to the camera for document scanning</string>
     <key>NSLocalNetworkUsageDescription</key>
     <string>ScanFlow needs network access to discover and connect to network scanners</string>
+    <key>NSContactsUsageDescription</key>
+    <string>ScanFlow can create contacts from scanned documents</string>
+    <key>NSCalendarsUsageDescription</key>
+    <string>ScanFlow can create calendar events from scanned documents</string>
     <key>NSBonjourServices</key>
     <array>
         <string>_scanner._tcp</string>

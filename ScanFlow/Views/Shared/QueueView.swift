@@ -38,6 +38,7 @@ struct QueueView: View {
                 .disabled(appState.scanQueue.isEmpty || appState.isScanning)
             }
             .padding()
+            .modifier(GlassHeaderStyle(cornerRadius: 14))
 
             Divider()
 
@@ -118,6 +119,20 @@ struct QueueItemRow: View {
         case .processing: return .orange
         case .completed: return .green
         case .failed: return .red
+        }
+    }
+}
+
+private struct GlassHeaderStyle: ViewModifier {
+    let cornerRadius: CGFloat
+
+    func body(content: Content) -> some View {
+        if #available(macOS 16.0, *) {
+            content
+                .glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
+        } else {
+            content
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: cornerRadius))
         }
     }
 }

@@ -50,7 +50,7 @@ struct PreviewView: View {
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .padding()
-                        .background(.ultraThinMaterial)
+                        .modifier(GlassPanelStyle(cornerRadius: 12))
                 } else {
                     ContentUnavailableView {
                         Label("No Preview", systemImage: "viewfinder")
@@ -64,7 +64,7 @@ struct PreviewView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color(nsColor: .controlBackgroundColor).opacity(0.5))
+            .modifier(GlassPanelStyle(cornerRadius: 16))
         }
         .onAppear {
             logger.info("PreviewView appeared")
@@ -86,6 +86,20 @@ struct PreviewView: View {
             appState.showAlert(message: "Failed to load preview: \(error.localizedDescription)")
         }
         #endif
+    }
+}
+
+private struct GlassPanelStyle: ViewModifier {
+    let cornerRadius: CGFloat
+
+    func body(content: Content) -> some View {
+        if #available(macOS 16.0, *) {
+            content
+                .glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
+        } else {
+            content
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: cornerRadius))
+        }
     }
 }
 

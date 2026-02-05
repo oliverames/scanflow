@@ -29,6 +29,11 @@ let package = Package(
             swiftSettings: [
                 .enableUpcomingFeature("BareSlashRegexLiterals")
             ]
+        ),
+        .testTarget(
+            name: "ScanFlowTests",
+            dependencies: ["ScanFlow"],
+            path: "Tests"
         )
     ]
 )

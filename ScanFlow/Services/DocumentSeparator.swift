@@ -113,7 +113,7 @@ class DocumentSeparator {
         for i in 0..<pages.count {
             // Check for blank page
             if settings.useBlankPages {
-                let threshold = 1.0 - (settings.blankSensitivity * 0.1)  // Convert 0-1 to 0.9-1.0
+                let threshold = max(0.78, 0.98 - (settings.blankSensitivity * 0.20))
                 let isBlank = await imageProcessor.isBlankPage(pages[i], threshold: threshold)
                 
                 if isBlank {

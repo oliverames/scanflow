@@ -60,7 +60,8 @@ class BarcodeRecognizer {
 
     /// Detect all barcodes in an image
     func detectBarcodes(in image: NSImage) async throws -> [RecognizedBarcode] {
-        guard let ciImage = CIImage(data: image.tiffRepresentation!) else {
+        guard let tiffData = image.tiffRepresentation,
+              let ciImage = CIImage(data: tiffData) else {
             throw BarcodeError.invalidImage
         }
 

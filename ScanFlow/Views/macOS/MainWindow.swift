@@ -37,6 +37,7 @@ struct MainWindow: View {
                 // If we connect, dismiss the sheet
                 if newState.isConnected && !oldState.isConnected {
                     logger.info("Scanner connected, dismissing selection view")
+                    appState.markScannerUsed()
                     appState.showScannerSelection = false
                 }
                 // If we disconnect, show the sheet
@@ -46,6 +47,7 @@ struct MainWindow: View {
                 }
             }
             .onAppear {
+                appState.exitBackgroundMode()
                 // Show sheet if not connected
                 if !appState.scannerManager.connectionState.isConnected && !appState.useMockScanner {
                     appState.showScannerSelection = true
@@ -64,7 +66,6 @@ struct MainWindow: View {
                 .navigationSplitViewColumnWidth(min: 700, ideal: 900)
         }
         .navigationSplitViewStyle(.balanced)
-        .background(.ultraThinMaterial)
         .onAppear {
             logger.info("Main content view appeared")
         }
@@ -120,11 +121,7 @@ struct MainWindow: View {
                     }
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
-                    .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 6))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(Color(nsColor: .separatorColor), lineWidth: 0.5)
-                    )
+                    .modifier(GlassToolbarPill())
                 }
                 .menuIndicator(.hidden)
                 .help("Select Preset")
@@ -169,7 +166,22 @@ struct DetailView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(.ultraThinMaterial)
+    }
+}
+
+private struct GlassToolbarPill: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(macOS 16.0, *) {
+            content
+                .glassEffect(.regular, in: .rect(cornerRadius: 8))
+        } else {
+            content
+                .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 8))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color(nsColor: .separatorColor), lineWidth: 0.5)
+                )
+        }
     }
 }
 

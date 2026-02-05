@@ -30,15 +30,18 @@ struct PresetView: View {
                     }
                     .buttonStyle(.borderless)
                 }
-                .padding()
-
-                Divider()
+                .padding(12)
+                .modifier(GlassHeaderStyle(cornerRadius: 14))
+                .padding(.horizontal, 12)
+                .padding(.top, 12)
 
                 List(appState.presets, selection: $selectedPreset) { preset in
-                    PresetListItem(preset: preset)
+                    PresetListItem(preset: preset, isSelected: preset.id == selectedPreset)
                         .tag(preset.id)
+                        .listRowBackground(Color.clear)
                 }
                 .listStyle(.sidebar)
+                .padding(.horizontal, 6)
             }
             .frame(minWidth: 250, maxWidth: 350)
 
@@ -63,7 +66,11 @@ struct PresetView: View {
 
     private func binding(for preset: ScanPreset) -> Binding<ScanPreset> {
         guard let index = appState.presets.firstIndex(where: { $0.id == preset.id }) else {
-            fatalError("Preset not found")
+            assertionFailure("Preset not found")
+            return Binding(
+                get: { preset },
+                set: { _ in }
+            )
         }
         return Binding(
             get: { appState.presets[index] },
@@ -81,6 +88,7 @@ struct PresetView: View {
 
 struct PresetListItem: View {
     let preset: ScanPreset
+    let isSelected: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -95,7 +103,8 @@ struct PresetListItem: View {
             .font(.caption)
             .foregroundStyle(.secondary)
         }
-        .padding(.vertical, 4)
+        .padding(8)
+        .modifier(GlassCardStyle(cornerRadius: 12, isSelected: isSelected))
     }
 }
 
@@ -132,6 +141,10 @@ struct PresetDetailView: View {
                     }
                 }
 
+                if preset.format == .pdf || preset.format == .compressedPDF {
+                    Toggle("Searchable PDF (OCR)", isOn: $preset.searchablePDF)
+                }
+
                 if preset.format == .jpeg {
                     HStack {
                         Text("Quality:")
@@ -163,7 +176,9 @@ struct PresetDetailView: View {
             }
         }
         .formStyle(.grouped)
-        .padding()
+        .padding(16)
+        .modifier(GlassPanelStyle(cornerRadius: 20))
+        .padding(16)
         .onChange(of: preset) {
             appState.savePresets()
         }
@@ -174,4 +189,49 @@ struct PresetDetailView: View {
     PresetView()
         .environment(AppState())
         .frame(width: 800, height: 600)
+}
+
+private struct GlassHeaderStyle: ViewModifier {
+    let cornerRadius: CGFloat
+
+    func body(content: Content) -> some View {
+        content
+            .padding(.vertical, 8)
+            .padding(.horizontal, 12)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .strokeBorder(.white.opacity(0.18), lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.12), radius: 12, x: 0, y: 8)
+    }
+}
+
+private struct GlassCardStyle: ViewModifier {
+    let cornerRadius: CGFloat
+    let isSelected: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .strokeBorder(isSelected ? Color.accentColor.opacity(0.5) : Color.white.opacity(0.16), lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.12), radius: 10, x: 0, y: 6)
+    }
+}
+
+private struct GlassPanelStyle: ViewModifier {
+    let cornerRadius: CGFloat
+
+    func body(content: Content) -> some View {
+        content
+            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .strokeBorder(Color.white.opacity(0.14), lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.14), radius: 18, x: 0, y: 12)
+    }
 }

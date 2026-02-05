@@ -35,7 +35,8 @@ class ImageProcessor {
 
     /// Process image with preset settings
     func process(_ image: NSImage, with preset: ScanPreset) async throws -> NSImage {
-        guard let ciImage = CIImage(data: image.tiffRepresentation!) else {
+        guard let tiffData = image.tiffRepresentation,
+              let ciImage = CIImage(data: tiffData) else {
             throw ImageProcessingError.invalidImage
         }
 
@@ -230,7 +231,8 @@ class ImageProcessor {
 
     /// Detect if a scanned page is blank or nearly blank
     func isBlankPage(_ image: NSImage, threshold: Double = 0.98) async -> Bool {
-        guard let ciImage = CIImage(data: image.tiffRepresentation!) else {
+        guard let tiffData = image.tiffRepresentation,
+              let ciImage = CIImage(data: tiffData) else {
             return false
         }
 
@@ -292,7 +294,8 @@ class ImageProcessor {
 
     /// Extract text from image using Vision OCR
     func recognizeText(_ image: NSImage) async throws -> String {
-        guard let ciImage = CIImage(data: image.tiffRepresentation!) else {
+        guard let tiffData = image.tiffRepresentation,
+              let ciImage = CIImage(data: tiffData) else {
             throw ImageProcessingError.invalidImage
         }
 

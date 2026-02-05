@@ -17,6 +17,10 @@ struct LibraryView: View {
     @State private var searchText = ""
     @State private var quickLookURL: URL?
     @State private var showingQuickLook = false
+    @State private var showingActionSheet = false
+    @State private var actionSuggestions: [DocumentActionSuggestion] = []
+    @State private var actionFile: ScannedFile?
+    @State private var isAnalyzing = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -32,6 +36,18 @@ struct LibraryView: View {
                 TextField("Search...", text: $searchText)
                     .textFieldStyle(.roundedBorder)
                     .frame(width: 200)
+
+                Button {
+                    analyzeSelectedForActions()
+                } label: {
+                    if isAnalyzing {
+                        Label("Analyzing...", systemImage: "sparkle.magnifyingglass")
+                    } else {
+                        Label("Create From Document", systemImage: "calendar.badge.plus")
+                    }
+                }
+                .buttonStyle(.bordered)
+                .disabled(selectedFiles.count != 1 || isAnalyzing)
                 #endif
 
                 #if os(macOS)
@@ -65,6 +81,7 @@ struct LibraryView: View {
                 .buttonStyle(.bordered)
             }
             .padding()
+            .modifier(GlassHeaderStyle(cornerRadius: 14))
 
             Divider()
 
@@ -95,6 +112,21 @@ struct LibraryView: View {
                 }
             }
         }
+        #if os(macOS)
+        .sheet(isPresented: $showingActionSheet) {
+            if let selectedFile = actionFile {
+                DocumentActionSheet(
+                    file: selectedFile,
+                    suggestions: actionSuggestions,
+                    onDismiss: {
+                        showingActionSheet = false
+                        actionSuggestions = []
+                        actionFile = nil
+                    }
+                )
+            }
+        }
+        #endif
     }
 
     private var filteredFiles: [ScannedFile] {
@@ -102,6 +134,28 @@ struct LibraryView: View {
             return appState.scannedFiles
         }
         return appState.scannedFiles.filter { $0.filename.localizedCaseInsensitiveContains(searchText) }
+    }
+
+    private func analyzeSelectedForActions() {
+        #if os(macOS)
+        guard let selectedId = selectedFiles.first,
+              let file = appState.scannedFiles.first(where: { $0.id == selectedId }) else {
+            return
+        }
+
+        isAnalyzing = true
+        Task { @MainActor in
+            do {
+                let suggestions = try await appState.documentActionService.suggestions(for: file)
+                actionFile = file
+                actionSuggestions = suggestions
+                showingActionSheet = true
+            } catch {
+                appState.showAlert(message: "Failed to analyze document: \(error.localizedDescription)")
+            }
+            isAnalyzing = false
+        }
+        #endif
     }
 
     private func openInFinder() {
@@ -174,11 +228,50 @@ struct FileGridItem: View {
                 .foregroundStyle(.secondary)
             }
         }
+        .padding(8)
+        .modifier(GlassCardStyle(cornerRadius: 12, isSelected: isSelected))
         #if os(macOS)
         .onDrag {
             NSItemProvider(object: file.fileURL as NSURL)
         }
         #endif
+    }
+}
+
+private struct GlassHeaderStyle: ViewModifier {
+    let cornerRadius: CGFloat
+
+    func body(content: Content) -> some View {
+        if #available(macOS 16.0, *) {
+            content
+                .glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
+        } else {
+            content
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: cornerRadius))
+        }
+    }
+}
+
+private struct GlassCardStyle: ViewModifier {
+    let cornerRadius: CGFloat
+    let isSelected: Bool
+
+    func body(content: Content) -> some View {
+        if #available(macOS 16.0, *) {
+            content
+                .glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
+                .overlay(
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .strokeBorder(isSelected ? Color.accentColor.opacity(0.6) : Color.white.opacity(0.12), lineWidth: 1)
+                )
+        } else {
+            content
+                .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: cornerRadius))
+                .overlay(
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .strokeBorder(isSelected ? Color.accentColor.opacity(0.6) : Color.clear, lineWidth: 1)
+                )
+        }
     }
 }
 

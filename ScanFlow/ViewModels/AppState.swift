@@ -9,7 +9,10 @@ import Foundation
 import SwiftUI
 import os.log
 #if os(macOS)
+import AppKit
 import PDFKit
+import ServiceManagement
+import ImageCaptureCore
 #endif
 
 private let logger = Logger(subsystem: "com.scanflow.app", category: "AppState")
@@ -37,7 +40,8 @@ enum NavigationSection: String, CaseIterable, Identifiable {
 class AppState {
     var scannerManager = ScannerManager()
     #if os(macOS)
-    var imageProcessor = ImageProcessor()
+    var imageProcessor: ImageProcessor
+    var documentActionService: DocumentActionService
     #endif
     var scanQueue: [QueuedScan] = []
     var scannedFiles: [ScannedFile] = []
@@ -49,6 +53,7 @@ class AppState {
     var alertMessage: String = ""
     var showScanSettings: Bool = true
     var showScannerSelection: Bool = false
+    var isBackgroundModeEnabled: Bool = false
 
     // Settings - use separate ObservableObject to avoid @Observable/@AppStorage conflict
     @ObservationIgnored private var _settings = SettingsStore()
@@ -79,7 +84,40 @@ class AppState {
     }
     var useMockScanner: Bool {
         get { _settings.useMockScanner }
-        set { _settings.useMockScanner = newValue }
+        set {
+            _settings.useMockScanner = newValue
+            scannerManager.useMockScanner = newValue
+        }
+    }
+
+    var keepConnectedInBackground: Bool {
+        get { _settings.keepConnectedInBackground }
+        set { _settings.keepConnectedInBackground = newValue }
+    }
+
+    var shouldPromptForBackgroundConnection: Bool {
+        get { _settings.shouldPromptForBackgroundConnection }
+        set { _settings.shouldPromptForBackgroundConnection = newValue }
+    }
+
+    var hasConnectedScanner: Bool {
+        get { _settings.hasConnectedScanner }
+        set { _settings.hasConnectedScanner = newValue }
+    }
+
+    var autoStartScanWhenReady: Bool {
+        get { _settings.autoStartScanWhenReady }
+        set { _settings.autoStartScanWhenReady = newValue }
+    }
+
+    var startAtLogin: Bool {
+        get { _settings.startAtLogin }
+        set { _settings.startAtLogin = newValue }
+    }
+
+    var autoStartScannerIDs: Set<String> {
+        get { _settings.autoStartScannerIDs }
+        set { _settings.autoStartScannerIDs = newValue }
     }
 
     // AI-assisted file naming settings (defaults for new presets)
@@ -96,18 +134,43 @@ class AppState {
 
     init() {
         logger.info("AppState initializing...")
+        #if os(macOS)
+        let processor = ImageProcessor()
+        imageProcessor = processor
+        documentActionService = DocumentActionService(imageProcessor: processor)
+        scannerManager.useMockScanner = useMockScanner
+        scannerManager.onDeviceReady = { [weak self] device in
+            self?.handleScannerReadyForAutoScan(device: device)
+        }
+        scannerManager.onScannerDiscovered = { [weak self] scanner in
+            self?.handleScannerDiscovered(scanner)
+        }
+        if keepConnectedInBackground && !startAtLogin {
+            startAtLogin = true
+        }
+        if keepConnectedInBackground {
+            scannerManager.startBrowsing()
+        }
+        updateLoginItemRegistration(enabled: startAtLogin)
+        #endif
         loadPresets()
         logger.info("AppState initialized with \(self.presets.count) presets")
     }
 
     func loadPresets() {
         logger.info("Loading presets from UserDefaults")
-        if let data = UserDefaults.standard.data(forKey: "customPresets"),
-           let customPresets = try? JSONDecoder().decode([ScanPreset].self, from: data) {
+        guard let data = UserDefaults.standard.data(forKey: "customPresets") else {
+            logger.info("No custom presets found, using defaults")
+            return
+        }
+        
+        do {
+            let customPresets = try JSONDecoder().decode([ScanPreset].self, from: data)
             presets = ScanPreset.defaults + customPresets
             logger.info("Loaded \(customPresets.count) custom presets")
-        } else {
-            logger.info("No custom presets found, using defaults")
+        } catch {
+            logger.error("Failed to decode custom presets: \(error.localizedDescription). Using defaults.")
+            presets = ScanPreset.defaults
         }
     }
 
@@ -115,9 +178,12 @@ class AppState {
         let customPresets = presets.filter { preset in
             !ScanPreset.defaults.contains { $0.id == preset.id }
         }
-        if let data = try? JSONEncoder().encode(customPresets) {
+        do {
+            let data = try JSONEncoder().encode(customPresets)
             UserDefaults.standard.set(data, forKey: "customPresets")
             logger.info("Saved \(customPresets.count) custom presets")
+        } catch {
+            logger.error("Failed to encode presets: \(error.localizedDescription)")
         }
     }
 
@@ -158,9 +224,11 @@ class AppState {
                 logger.info("Scan completed, processing image...")
 
                 scanQueue[index].status = .processing
-                let savedFile = try await saveScannedImage(result, preset: scanQueue[index].preset)
-                scannedFiles.append(savedFile)
-                logger.info("Image saved to: \(savedFile.fileURL.path)")
+                let savedFiles = try await saveScannedImage(result, preset: scanQueue[index].preset)
+                scannedFiles.append(contentsOf: savedFiles)
+                if let firstFile = savedFiles.first {
+                    logger.info("Image saved to: \(firstFile.fileURL.path)")
+                }
 
                 scanQueue[index].status = .completed
                 logger.info("Scan \(index + 1) completed successfully")
@@ -177,189 +245,449 @@ class AppState {
     }
 
     #if os(macOS)
-    private func saveScannedImage(_ result: ScanResult, preset: ScanPreset) async throws -> ScannedFile {
-        // Expand tilde in path
+    private func saveScannedImage(_ result: ScanResult, preset: ScanPreset) async throws -> [ScannedFile] {
         let destPath = NSString(string: preset.destination).expandingTildeInPath
         let destURL = URL(fileURLWithPath: destPath)
 
-        // Create directory if needed
-        try? FileManager.default.createDirectory(at: destURL, withIntermediateDirectories: true)
-
-        // Generate filename
-        let filename = generateFilename(format: preset.format)
-        let fileURL = destURL.appendingPathComponent(filename)
+        do {
+            try FileManager.default.createDirectory(at: destURL, withIntermediateDirectories: true)
+        } catch {
+            logger.error("Failed to create destination directory: \(error.localizedDescription)")
+            throw error
+        }
 
         let images = result.images
         let pageCount = images.count
-        logger.info("Saving \(pageCount) page(s) to \(fileURL.path)")
+        logger.info("Saving \(pageCount) page(s) to \(destURL.path)")
 
-        // Handle different formats
-        switch preset.format {
-        case .jpeg:
-            // For JPEG, save only the first page (or create multiple files for multi-page)
-            if pageCount > 1 {
-                // Save each page as a separate JPEG with sequence number
-                for (index, image) in images.enumerated() {
+        var savedFiles: [ScannedFile] = []
+        var sequenceCounter = preset.useSequenceNumber ? preset.sequenceStartNumber : 0
+
+        func fallbackBaseName() -> String {
+            var nameParts: [String] = []
+            let prefix = preset.fileNamePrefix.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !prefix.isEmpty {
+                nameParts.append(prefix)
+            }
+            if preset.uniqueDateTag {
+                nameParts.append(dateTagString())
+            }
+            if preset.useSequenceNumber {
+                nameParts.append(String(format: "%03d", sequenceCounter))
+                sequenceCounter += 1
+            }
+            return nameParts.isEmpty ? dateTagString() : nameParts.joined(separator: "")
+        }
+
+        func finalizeFile(url: URL, filename: String) throws {
+            let fileAttributes = try FileManager.default.attributesOfItem(atPath: url.path)
+            let fileSize = fileAttributes[.size] as? Int64 ?? 0
+            savedFiles.append(ScannedFile(
+                filename: filename,
+                fileURL: url,
+                size: fileSize,
+                resolution: result.metadata.resolution,
+                dateScanned: result.metadata.timestamp,
+                scannerModel: result.metadata.scannerModel,
+                format: preset.format
+            ))
+        }
+
+        func resolveDestinationURL(for filename: String) -> URL {
+            let url = destURL.appendingPathComponent(filename)
+            guard FileManager.default.fileExists(atPath: url.path) else {
+                return url
+            }
+            switch preset.existingFileBehavior {
+            case .overwrite:
+                return url
+            case .askUser:
+                showAlert(message: "File already exists. Using next available filename.")
+                fallthrough
+            case .increaseSequence:
+                return destURL.appendingPathComponent(nextAvailableFilename(startingWith: filename, in: destURL))
+            }
+        }
+
+        var documents: [[NSImage]] = [images]
+        if preset.separationSettings.enabled {
+            let separator = DocumentSeparator(imageProcessor: imageProcessor, barcodeRecognizer: BarcodeRecognizer())
+            let separationResult = try await separator.separateDocuments(pages: images, settings: preset.separationSettings)
+            documents = separationResult.documents
+        } else if preset.splitOnPage, pageCount > 1 {
+            documents = splitPages(pages: images, chunkSize: preset.splitPageNumber)
+        }
+
+        let extensionString = fileExtension(for: preset.format)
+        let aiNamer = AIFileNamer(imageProcessor: imageProcessor)
+
+        for (documentIndex, documentPages) in documents.enumerated() {
+            let baseName = await preferredBaseName(
+                for: documentPages,
+                documentIndex: documentIndex,
+                preset: preset,
+                aiNamer: aiNamer,
+                fallback: fallbackBaseName
+            )
+
+            switch preset.format {
+            case .jpeg:
+                for (index, image) in documentPages.enumerated() {
                     guard let tiffData = image.tiffRepresentation,
                           let bitmapImage = NSBitmapImageRep(data: tiffData),
                           let imageData = bitmapImage.representation(using: .jpeg, properties: [.compressionFactor: preset.quality]) else {
                         throw ScannerError.scanFailed
                     }
-                    let pageFilename = filename.replacingOccurrences(of: ".jpeg", with: "_\(String(format: "%03d", index + 1)).jpeg")
-                    let pageURL = destURL.appendingPathComponent(pageFilename)
-                    try imageData.write(to: pageURL)
+                    let filename = filenameForDocument(baseName: baseName, extensionString: extensionString, pageIndex: documentPages.count > 1 ? index : nil)
+                    let targetURL = resolveDestinationURL(for: filename)
+                    try imageData.write(to: targetURL)
+                    try finalizeFile(url: targetURL, filename: targetURL.lastPathComponent)
                 }
-            } else {
-                guard let tiffData = result.image.tiffRepresentation,
-                      let bitmapImage = NSBitmapImageRep(data: tiffData),
-                      let imageData = bitmapImage.representation(using: .jpeg, properties: [.compressionFactor: preset.quality]) else {
-                    throw ScannerError.scanFailed
-                }
-                try imageData.write(to: fileURL)
-            }
 
-        case .png:
-            // For PNG, save only the first page (or create multiple files for multi-page)
-            if pageCount > 1 {
-                for (index, image) in images.enumerated() {
+            case .png:
+                for (index, image) in documentPages.enumerated() {
                     guard let tiffData = image.tiffRepresentation,
                           let bitmapImage = NSBitmapImageRep(data: tiffData),
                           let imageData = bitmapImage.representation(using: .png, properties: [:]) else {
                         throw ScannerError.scanFailed
                     }
-                    let pageFilename = filename.replacingOccurrences(of: ".png", with: "_\(String(format: "%03d", index + 1)).png")
-                    let pageURL = destURL.appendingPathComponent(pageFilename)
-                    try imageData.write(to: pageURL)
+                    let filename = filenameForDocument(baseName: baseName, extensionString: extensionString, pageIndex: documentPages.count > 1 ? index : nil)
+                    let targetURL = resolveDestinationURL(for: filename)
+                    try imageData.write(to: targetURL)
+                    try finalizeFile(url: targetURL, filename: targetURL.lastPathComponent)
                 }
-            } else {
-                guard let tiffData = result.image.tiffRepresentation,
-                      let bitmapImage = NSBitmapImageRep(data: tiffData),
-                      let imageData = bitmapImage.representation(using: .png, properties: [:]) else {
-                    throw ScannerError.scanFailed
-                }
-                try imageData.write(to: fileURL)
-            }
 
-        case .tiff:
-            // For TIFF, save only the first page (or create multiple files for multi-page)
-            if pageCount > 1 {
-                for (index, image) in images.enumerated() {
+            case .tiff:
+                for (index, image) in documentPages.enumerated() {
                     guard let tiffData = image.tiffRepresentation else {
                         throw ScannerError.scanFailed
                     }
-                    let pageFilename = filename.replacingOccurrences(of: ".tiff", with: "_\(String(format: "%03d", index + 1)).tiff")
-                    let pageURL = destURL.appendingPathComponent(pageFilename)
-                    try tiffData.write(to: pageURL)
+                    let filename = filenameForDocument(baseName: baseName, extensionString: extensionString, pageIndex: documentPages.count > 1 ? index : nil)
+                    let targetURL = resolveDestinationURL(for: filename)
+                    try tiffData.write(to: targetURL)
+                    try finalizeFile(url: targetURL, filename: targetURL.lastPathComponent)
                 }
-            } else {
-                guard let tiffData = result.image.tiffRepresentation else {
+
+            case .pdf:
+                let pdfDocument = PDFDocument()
+                for (index, image) in documentPages.enumerated() {
+                    if let pdfPage = PDFPage(image: image) {
+                        if preset.searchablePDF {
+                            if let text = try? await imageProcessor.recognizeText(image), !text.isEmpty {
+                                addTextAnnotation(to: pdfPage, text: text)
+                            }
+                        }
+                        pdfDocument.insert(pdfPage, at: index)
+                    } else {
+                        logger.warning("Failed to create PDF page from image \(index + 1)")
+                    }
+                }
+                applyPDFMetadata(to: pdfDocument)
+                let filename = filenameForDocument(baseName: baseName, extensionString: extensionString, pageIndex: nil)
+                let targetURL = resolveDestinationURL(for: filename)
+                guard pdfDocument.write(to: targetURL) else {
                     throw ScannerError.scanFailed
                 }
-                try tiffData.write(to: fileURL)
-            }
+                try finalizeFile(url: targetURL, filename: targetURL.lastPathComponent)
 
-        case .pdf:
-            // Create multi-page PDF from all images (uncompressed)
-            let pdfDocument = PDFDocument()
-            for (index, image) in images.enumerated() {
-                if let pdfPage = PDFPage(image: image) {
+            case .compressedPDF:
+                let pdfDocument = PDFDocument()
+                for (index, image) in documentPages.enumerated() {
+                    guard let tiffData = image.tiffRepresentation,
+                          let bitmapImage = NSBitmapImageRep(data: tiffData),
+                          let jpegData = bitmapImage.representation(using: .jpeg, properties: [.compressionFactor: preset.quality]),
+                          let jpegImage = NSImage(data: jpegData),
+                          let pdfPage = PDFPage(image: jpegImage) else {
+                        logger.warning("Failed to create compressed PDF page from image \(index + 1)")
+                        continue
+                    }
+                    if preset.searchablePDF {
+                        if let text = try? await imageProcessor.recognizeText(image), !text.isEmpty {
+                            addTextAnnotation(to: pdfPage, text: text)
+                        }
+                    }
                     pdfDocument.insert(pdfPage, at: index)
-                } else {
-                    logger.warning("Failed to create PDF page from image \(index + 1)")
                 }
-            }
-
-            // Add metadata
-            var attributes: [PDFDocumentAttribute: Any] = [:]
-            attributes[.creatorAttribute] = "ScanFlow"
-            attributes[.producerAttribute] = "ScanFlow Scanner App"
-            attributes[.creationDateAttribute] = Date()
-            pdfDocument.documentAttributes = attributes
-
-            guard pdfDocument.write(to: fileURL) else {
-                throw ScannerError.scanFailed
-            }
-            logger.info("Created \(pageCount)-page PDF at \(fileURL.path)")
-
-        case .compressedPDF:
-            // Create compressed multi-page PDF using JPEG-compressed images
-            let pdfDocument = PDFDocument()
-            for (index, image) in images.enumerated() {
-                guard let tiffData = image.tiffRepresentation,
-                      let bitmapImage = NSBitmapImageRep(data: tiffData),
-                      let jpegData = bitmapImage.representation(using: .jpeg, properties: [.compressionFactor: preset.quality]),
-                      let jpegImage = NSImage(data: jpegData),
-                      let pdfPage = PDFPage(image: jpegImage) else {
-                    logger.warning("Failed to create compressed PDF page from image \(index + 1)")
-                    continue
+                applyPDFMetadata(to: pdfDocument)
+                let filename = filenameForDocument(baseName: baseName, extensionString: extensionString, pageIndex: nil)
+                let targetURL = resolveDestinationURL(for: filename)
+                guard pdfDocument.write(to: targetURL) else {
+                    throw ScannerError.scanFailed
                 }
-                pdfDocument.insert(pdfPage, at: index)
+                try finalizeFile(url: targetURL, filename: targetURL.lastPathComponent)
             }
-
-            // Add metadata
-            var attributes: [PDFDocumentAttribute: Any] = [:]
-            attributes[.creatorAttribute] = "ScanFlow"
-            attributes[.producerAttribute] = "ScanFlow Scanner App"
-            attributes[.creationDateAttribute] = Date()
-            pdfDocument.documentAttributes = attributes
-
-            guard pdfDocument.write(to: fileURL) else {
-                throw ScannerError.scanFailed
-            }
-            logger.info("Created \(pageCount)-page compressed PDF at \(fileURL.path)")
         }
 
-        // Get file size
-        let fileAttributes = try FileManager.default.attributesOfItem(atPath: fileURL.path)
-        let fileSize = fileAttributes[.size] as? Int64 ?? 0
-
-        return ScannedFile(
-            filename: filename,
-            fileURL: fileURL,
-            size: fileSize,
-            resolution: result.metadata.resolution,
-            dateScanned: result.metadata.timestamp,
-            scannerModel: result.metadata.scannerModel,
-            format: preset.format
-        )
+        return savedFiles
     }
     #endif
 
-    private func generateFilename(format: ScanFormat) -> String {
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        let dateString = dateFormatter.string(from: Date())
+    private func splitPages(pages: [NSImage], chunkSize: Int) -> [[NSImage]] {
+        guard chunkSize > 1 else {
+            return pages.map { [$0] }
+        }
+        var chunks: [[NSImage]] = []
+        var index = 0
+        while index < pages.count {
+            let end = min(index + chunkSize, pages.count)
+            chunks.append(Array(pages[index..<end]))
+            index = end
+        }
+        return chunks
+    }
 
-        // Determine file extension
-        let fileExtension: String
+    private func preferredBaseName(
+        for pages: [NSImage],
+        documentIndex: Int,
+        preset: ScanPreset,
+        aiNamer: AIFileNamer,
+        fallback: () -> String
+    ) async -> String {
+        var candidate = fallback()
+
+        if preset.namingSettings.enabled {
+            let availability = await AIFileNamer.isAvailable()
+            if availability {
+                do {
+                    let response = try await aiNamer.suggestFilename(for: pages, settings: preset.namingSettings)
+                    let aiCandidate = response.filename.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !aiCandidate.isEmpty {
+                        candidate = aiCandidate
+                    }
+                } catch {
+                    handleNamingFallback(error: error, settings: preset.namingSettings)
+                }
+            } else {
+                handleNamingFallback(error: AIFileNamerError.modelUnavailable, settings: preset.namingSettings)
+            }
+        }
+
+        if preset.editEachFilename, let previewImage = pages.first {
+            let fallbackLabel = "Document \(documentIndex + 1)"
+            let manualName = promptForFilename(suggested: candidate, preview: previewImage, fallbackLabel: fallbackLabel)
+            if let manualName, !manualName.isEmpty {
+                candidate = manualName
+            }
+        }
+
+        return candidate
+    }
+
+    private func handleNamingFallback(error: Error, settings: NamingSettings) {
+        switch settings.fallbackBehavior {
+        case .promptManual:
+            showAlert(message: "AI naming unavailable. Using the default naming pattern.")
+        case .notifyAndFallback:
+            showAlert(message: "AI naming failed (\(error.localizedDescription)). Using the default naming pattern.")
+        case .silentFallback:
+            break
+        }
+    }
+
+    #if os(macOS)
+    private func promptForFilename(suggested: String, preview: NSImage, fallbackLabel: String) -> String? {
+        let alert = NSAlert()
+        alert.messageText = "Edit Filename"
+        alert.informativeText = "Confirm the filename for this document."
+        alert.addButton(withTitle: "Save")
+        alert.addButton(withTitle: "Use Suggested")
+
+        let imageView = NSImageView(image: preview)
+        imageView.imageScaling = .scaleProportionallyUpOrDown
+        imageView.frame = CGRect(x: 0, y: 0, width: 220, height: 280)
+
+        let textField = NSTextField(string: suggested)
+        textField.placeholderString = fallbackLabel
+
+        let stack = NSStackView(views: [imageView, textField])
+        stack.orientation = .vertical
+        stack.spacing = 12
+        stack.alignment = .leading
+        alert.accessoryView = stack
+
+        let response = alert.runModal()
+        if response == .alertFirstButtonReturn {
+            return sanitizeFilenameInput(textField.stringValue)
+        }
+
+        if response == .alertSecondButtonReturn {
+            return sanitizeFilenameInput(suggested)
+        }
+
+        return nil
+    }
+
+    private func sanitizeFilenameInput(_ filename: String) -> String {
+        let invalidCharacters = CharacterSet(charactersIn: ":/\\?*\"<>|")
+        let sanitized = filename.components(separatedBy: invalidCharacters).joined(separator: "")
+        return sanitized.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    #endif
+
+    private func filenameForDocument(baseName: String, extensionString: String, pageIndex: Int?) -> String {
+        var name = baseName
+        if let pageIndex {
+            name += "-\(String(format: "%03d", pageIndex + 1))"
+        }
+        return "\(name).\(extensionString)"
+    }
+
+    private func fileExtension(for format: ScanFormat) -> String {
         switch format {
         case .pdf, .compressedPDF:
-            fileExtension = "pdf"
+            return "pdf"
         case .jpeg:
-            fileExtension = "jpeg"
+            return "jpeg"
         case .tiff:
-            fileExtension = "tiff"
+            return "tiff"
         case .png:
-            fileExtension = "png"
+            return "png"
         }
+    }
 
-        // Find next available number
+    private func dateTagString() -> String {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        return dateFormatter.string(from: Date())
+    }
+
+    private func nextAvailableFilename(startingWith filename: String, in destinationURL: URL) -> String {
+        let base = destinationURL.appendingPathComponent(filename).deletingPathExtension().lastPathComponent
+        let ext = destinationURL.appendingPathComponent(filename).pathExtension
         var counter = 1
-        var filename = "\(dateString)_\(String(format: "%03d", counter)).\(fileExtension)"
-
-        let destPath = NSString(string: scanDestination).expandingTildeInPath
-        let destURL = URL(fileURLWithPath: destPath)
-
-        while FileManager.default.fileExists(atPath: destURL.appendingPathComponent(filename).path) {
+        var candidate = "\(base)-\(counter).\(ext)"
+        while FileManager.default.fileExists(atPath: destinationURL.appendingPathComponent(candidate).path) {
             counter += 1
-            filename = "\(dateString)_\(String(format: "%03d", counter)).\(fileExtension)"
+            candidate = "\(base)-\(counter).\(ext)"
         }
+        return candidate
+    }
 
-        return filename
+    private func applyPDFMetadata(to document: PDFDocument) {
+        var attributes: [PDFDocumentAttribute: Any] = [:]
+        attributes[.creatorAttribute] = "ScanFlow"
+        attributes[.producerAttribute] = "ScanFlow Scanner App"
+        attributes[.creationDateAttribute] = Date()
+        document.documentAttributes = attributes
+    }
+
+    private func addTextAnnotation(to page: PDFPage, text: String) {
+        let bounds = page.bounds(for: .mediaBox)
+        let annotation = PDFAnnotation(bounds: bounds, forType: .freeText, withProperties: nil)
+        annotation.contents = text
+        annotation.color = .clear
+        annotation.font = NSFont.systemFont(ofSize: 12)
+        page.addAnnotation(annotation)
     }
 
     func showAlert(message: String) {
         alertMessage = message
         showingAlert = true
     }
+
+    func markScannerUsed() {
+        hasConnectedScanner = true
+    }
+
+    func enterBackgroundMode() {
+        #if os(macOS)
+        isBackgroundModeEnabled = true
+        if keepConnectedInBackground {
+            scannerManager.startBrowsing()
+        }
+        NSApp.setActivationPolicy(.accessory)
+        NSApp.hide(nil)
+        #endif
+    }
+
+    func exitBackgroundMode() {
+        #if os(macOS)
+        isBackgroundModeEnabled = false
+        NSApp.setActivationPolicy(.regular)
+        NSApp.activate(ignoringOtherApps: true)
+        #endif
+    }
+
+    #if os(macOS)
+    func updateLoginItemRegistration(enabled: Bool) {
+        guard #available(macOS 13.0, *) else { return }
+        do {
+            let service = SMAppService.mainApp
+            if enabled {
+                try service.register()
+            } else {
+                try service.unregister()
+            }
+        } catch {
+            logger.error("Failed to update login item: \(error.localizedDescription)")
+        }
+    }
+
+    func handleKeepConnectedToggle(_ enabled: Bool) {
+        if enabled && !startAtLogin {
+            startAtLogin = true
+        }
+        if enabled {
+            scannerManager.startBrowsing()
+        }
+        updateLoginItemRegistration(enabled: startAtLogin)
+        NotificationCenter.default.post(
+            name: .scanflowKeepConnectedChanged,
+            object: nil,
+            userInfo: ["enabled": enabled]
+        )
+    }
+
+    func handleStartAtLoginToggle(_ enabled: Bool) {
+        startAtLogin = enabled
+        updateLoginItemRegistration(enabled: enabled)
+    }
+
+    func isAutoStartEnabled(for scanner: ICScannerDevice) -> Bool {
+        autoStartScannerIDs.contains(scanner.scanflowIdentifier)
+    }
+
+    func setAutoStartEnabled(_ enabled: Bool, for scanner: ICScannerDevice) {
+        var updated = autoStartScannerIDs
+        let identifier = scanner.scanflowIdentifier
+        if enabled {
+            updated.insert(identifier)
+        } else {
+            updated.remove(identifier)
+        }
+        autoStartScannerIDs = updated
+    }
+
+    private func handleScannerDiscovered(_ scanner: ICScannerDevice) {
+        guard keepConnectedInBackground, autoStartScanWhenReady else { return }
+        guard autoStartScannerIDs.contains(scanner.scanflowIdentifier) else { return }
+        if scannerManager.connectionState.isConnected { return }
+
+        Task {
+            try? await scannerManager.connect(to: scanner)
+        }
+    }
+    #endif
+
+    #if os(macOS)
+    private func handleScannerReadyForAutoScan(device: ICDevice?) {
+        guard keepConnectedInBackground, autoStartScanWhenReady else { return }
+        guard !isScanning else { return }
+
+        if let scanner = device as? ICScannerDevice {
+            let identifier = scanner.scanflowIdentifier
+            guard autoStartScannerIDs.contains(identifier) else { return }
+        } else if device != nil {
+            return
+        }
+
+        if scanQueue.isEmpty {
+            addToQueue(preset: currentPreset, count: 1)
+        }
+
+        Task {
+            await startScanning()
+        }
+    }
+    #endif
 }

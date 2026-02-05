@@ -57,7 +57,7 @@ struct ScannerStatusView: View {
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 8))
+            .modifier(GlassBadgeStyle(cornerRadius: 8))
         }
         .buttonStyle(.plain)
         .onAppear {
@@ -96,6 +96,20 @@ struct ScannerStatusView: View {
 
     private var statusText: String {
         appState.scannerManager.connectionState.description
+    }
+}
+
+private struct GlassBadgeStyle: ViewModifier {
+    let cornerRadius: CGFloat
+
+    func body(content: Content) -> some View {
+        if #available(macOS 16.0, *) {
+            content
+                .glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
+        } else {
+            content
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: cornerRadius))
+        }
     }
 }
 

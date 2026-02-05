@@ -121,12 +121,7 @@ struct AIRenamingSettingsView: View {
                 .font(.system(.caption, design: .monospaced))
                 .frame(height: 200)
                 .scrollContentBackground(.hidden)
-                .background(Color(nsColor: .textBackgroundColor))
-                .clipShape(RoundedRectangle(cornerRadius: 6))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 6)
-                        .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
-                )
+                .modifier(GlassTextEditorStyle())
             
             HStack {
                 Button("Reset to Default") {
@@ -174,6 +169,23 @@ struct AIRenamingSettingsView: View {
             return "Shows a notification and uses date-based naming (e.g., Scan-2024-03-15-001)."
         case .silentFallback:
             return "Silently falls back to date-based naming without notification."
+        }
+    }
+}
+
+private struct GlassTextEditorStyle: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(macOS 16.0, *) {
+            content
+                .glassEffect(.regular, in: .rect(cornerRadius: 6))
+        } else {
+            content
+                .background(Color(nsColor: .textBackgroundColor))
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+                )
         }
     }
 }

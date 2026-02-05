@@ -92,6 +92,8 @@ struct ScannerSettings: View {
     @Environment(AppState.self) private var appState
 
     var body: some View {
+        @Bindable var appState = appState
+
         Form {
             Section("Scanner") {
                 Text("Scanner: \(appState.scannerManager.mockScannerName)")
@@ -104,9 +106,53 @@ struct ScannerSettings: View {
                 }
             }
 
-            Section("Connection") {
-                Text("Available scanners will appear here")
+            Section("Background Connection") {
+                Toggle(
+                    "Keep connected when closing ScanFlow",
+                    isOn: Binding(
+                        get: { appState.keepConnectedInBackground },
+                        set: { newValue in
+                            appState.keepConnectedInBackground = newValue
+                            appState.handleKeepConnectedToggle(newValue)
+                        }
+                    )
+                )
+                Toggle("Auto-start scans when scanner is ready", isOn: $appState.autoStartScanWhenReady)
+                    .disabled(!appState.keepConnectedInBackground)
+                Toggle(
+                    "Start at login",
+                    isOn: Binding(
+                        get: { appState.startAtLogin },
+                        set: { newValue in
+                            appState.handleStartAtLoginToggle(newValue)
+                        }
+                    )
+                )
+                .disabled(appState.keepConnectedInBackground)
+                Toggle("Show background prompt on quit", isOn: $appState.shouldPromptForBackgroundConnection)
+
+                Text("Auto-start uses scanner readiness signals and may vary by device.")
+                    .font(.caption)
                     .foregroundStyle(.secondary)
+            }
+
+            Section("Auto-start Scanners") {
+                if appState.scannerManager.availableScanners.isEmpty {
+                    Text("Available scanners will appear here")
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(appState.scannerManager.availableScanners, id: \.self) { scanner in
+                        Toggle(
+                            scanner.name ?? "Unknown Scanner",
+                            isOn: Binding(
+                                get: { appState.isAutoStartEnabled(for: scanner) },
+                                set: { newValue in
+                                    appState.setAutoStartEnabled(newValue, for: scanner)
+                                }
+                            )
+                        )
+                    }
+                }
             }
         }
         .formStyle(.grouped)

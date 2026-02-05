@@ -9,7 +9,18 @@ import SwiftUI
 
 @main
 struct ScanFlowApp: App {
-    @State private var appState = AppState()
+    #if os(macOS)
+    @NSApplicationDelegateAdaptor(AppLifecycleDelegate.self) private var appDelegate
+    #endif
+    @State private var appState: AppState
+
+    init() {
+        let state = AppState()
+        _appState = State(initialValue: state)
+        #if os(macOS)
+        appDelegate.appStateProvider = { state }
+        #endif
+    }
 
     var body: some Scene {
         #if os(macOS)

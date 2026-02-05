@@ -164,6 +164,13 @@ struct ControlPanelView: View {
                 }
                 .labelsHidden()
 
+                if appState.currentPreset.format == .pdf || appState.currentPreset.format == .compressedPDF {
+                    Toggle("Searchable PDF (OCR)", isOn: $appState.currentPreset.searchablePDF)
+                        .toggleStyle(.checkbox)
+                        .controlSize(.small)
+                        .padding(.top, 4)
+                }
+
                 // Split on page option
                 HStack {
                     Toggle("Split on page", isOn: $appState.currentPreset.splitOnPage)
@@ -671,11 +678,19 @@ struct SettingsSection<Content: View>: View {
 }
 
 extension View {
+    @ViewBuilder
     func settingsFieldStyle() -> some View {
-        self
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
-            .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 6))
+        if #available(macOS 16.0, *) {
+            self
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+                .glassEffect(.regular, in: .rect(cornerRadius: 6))
+        } else {
+            self
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+                .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 6))
+        }
     }
 }
 

@@ -26,7 +26,6 @@ struct ScanView: View {
                 Divider()
 
                 ControlPanelView()
-                    .background(Color(nsColor: .windowBackgroundColor))
                     .fixedSize(horizontal: true, vertical: false)
                     .transition(.move(edge: .trailing).combined(with: .opacity))
             }
