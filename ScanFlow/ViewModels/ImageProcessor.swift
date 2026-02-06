@@ -47,8 +47,11 @@ class ImageProcessor {
             processedImage = try await detectAndCorrectOrientation(processedImage)
         }
 
-        // 2. Deskew if enabled
-        if preset.deskew {
+        // 2. Auto-crop if enabled (includes perspective correction)
+        if preset.autoCrop {
+            processedImage = try await detectAndCropDocument(processedImage)
+        } else if preset.deskew {
+            // Deskew only when auto-crop is off to avoid double correction
             processedImage = try await detectAndCorrectSkew(processedImage)
         }
 
@@ -91,6 +94,46 @@ class ImageProcessor {
 
         let transform = CGAffineTransform(rotationAngle: angle)
         return image.transformed(by: transform)
+    }
+
+    // MARK: - Auto-Cropping
+
+    /// Detect and crop document bounds using rectangle detection
+    func detectAndCropDocument(_ image: CIImage) async throws -> CIImage {
+        let request = VNDetectRectanglesRequest()
+        request.maximumObservations = 1
+        request.minimumAspectRatio = 0.3
+        request.maximumAspectRatio = 1.0
+        request.minimumSize = 0.4
+        request.minimumConfidence = 0.6
+
+        let handler = VNImageRequestHandler(ciImage: image, options: [:])
+        try handler.perform([request])
+
+        guard let observation = request.results?.first else {
+            return image
+        }
+
+        let topLeft = observation.topLeft
+        let topRight = observation.topRight
+        let bottomLeft = observation.bottomLeft
+        let bottomRight = observation.bottomRight
+
+        let imageSize = image.extent.size
+
+        let correctedTopLeft = CGPoint(x: topLeft.x * imageSize.width, y: topLeft.y * imageSize.height)
+        let correctedTopRight = CGPoint(x: topRight.x * imageSize.width, y: topRight.y * imageSize.height)
+        let correctedBottomLeft = CGPoint(x: bottomLeft.x * imageSize.width, y: bottomLeft.y * imageSize.height)
+        let correctedBottomRight = CGPoint(x: bottomRight.x * imageSize.width, y: bottomRight.y * imageSize.height)
+
+        let filter = CIFilter.perspectiveCorrection()
+        filter.inputImage = image
+        filter.topLeft = correctedTopLeft
+        filter.topRight = correctedTopRight
+        filter.bottomLeft = correctedBottomLeft
+        filter.bottomRight = correctedBottomRight
+
+        return filter.outputImage ?? image
     }
 
     // MARK: - Deskewing

@@ -36,6 +36,7 @@
     <string>ScanFlow can create calendar events from scanned documents</string>
     <key>NSBonjourServices</key>
     <array>
+        <string>_scanflow._tcp</string>
         <string>_scanner._tcp</string>
     </array>
     <key>UIApplicationSceneManifest</key>

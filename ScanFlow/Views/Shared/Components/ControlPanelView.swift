@@ -280,11 +280,11 @@ struct ControlPanelView: View {
                     if oldSources.isEmpty && !newSources.isEmpty {
                         // First connection - always prefer flatbed
                         appState.currentPreset.source = appState.scannerManager.preferredDefaultSource
-                        print("📷 [ControlPanelView] Scanner connected, defaulting to: \(appState.currentPreset.source.rawValue)")
+                        logger.debug("Scanner connected, defaulting to: \(appState.currentPreset.source.rawValue)")
                     } else if !newSources.contains(appState.currentPreset.source) {
                         // Current source no longer available - switch to preferred
                         appState.currentPreset.source = appState.scannerManager.preferredDefaultSource
-                        print("📷 [ControlPanelView] Source unavailable, switching to: \(appState.currentPreset.source.rawValue)")
+                        logger.debug("Source unavailable, switching to: \(appState.currentPreset.source.rawValue)")
                     }
                 }
             }
@@ -680,7 +680,7 @@ struct SettingsSection<Content: View>: View {
 extension View {
     @ViewBuilder
     func settingsFieldStyle() -> some View {
-        if #available(macOS 16.0, *) {
+        if #available(macOS 26.0, *) {
             self
                 .padding(.horizontal, 10)
                 .padding(.vertical, 8)

@@ -7,11 +7,14 @@
 //
 
 import Foundation
+import os.log
 #if os(macOS)
 import AppKit
 #endif
 
 #if os(macOS)
+
+private let logger = Logger(subsystem: "com.scanflow.app", category: "FolderActionsSupport")
 
 /// Folder actions manager for auto-processing
 @MainActor
@@ -116,7 +119,10 @@ class FolderActionsSupport {
             guard let info = clientCallBackInfo else { return }
             let watcher = Unmanaged<FolderActionsSupport>.fromOpaque(info).takeUnretainedValue()
 
-            let paths = Unmanaged<CFArray>.fromOpaque(eventPaths).takeUnretainedValue() as! [String]
+            guard let pathsArray = Unmanaged<CFArray>.fromOpaque(eventPaths).takeUnretainedValue() as? [String] else {
+                return
+            }
+            let paths = pathsArray
 
             Task { @MainActor in
                 for path in paths {
@@ -188,14 +194,18 @@ class FolderActionsSupport {
         // Process image
         var processedImage = image
 
-        if profile.autoEnhance || profile.deskew || profile.autoRotate {
+        if profile.autoEnhance || profile.deskew || profile.autoRotate || profile.autoCrop {
             processedImage = (try? await appState.imageProcessor.process(image, with: profile)) ?? image
         }
 
         // Perform OCR if enabled
         var ocrText: String?
         if folder.ocrEnabled {
-            ocrText = try? await appState.imageProcessor.recognizeText(processedImage)
+            do {
+                ocrText = try await appState.imageProcessor.recognizeText(processedImage)
+            } catch {
+                logger.warning("OCR failed for \(url.lastPathComponent): \(error.localizedDescription)")
+            }
         }
 
         // Determine output location
@@ -203,7 +213,12 @@ class FolderActionsSupport {
         let outputURL = URL(fileURLWithPath: outputFolder)
 
         // Create output directory
-        try? FileManager.default.createDirectory(at: outputURL, withIntermediateDirectories: true)
+        do {
+            try FileManager.default.createDirectory(at: outputURL, withIntermediateDirectories: true)
+        } catch {
+            logger.error("Failed to create output directory \(outputURL.path): \(error.localizedDescription)")
+            return
+        }
 
         // Save processed image
         let filename = url.deletingPathExtension().lastPathComponent + "_processed.\(profile.format.rawValue.lowercased())"
@@ -225,18 +240,34 @@ class FolderActionsSupport {
                 imageData = bitmap.representation(using: .jpeg, properties: [.compressionFactor: profile.quality])
             }
 
-            try? imageData?.write(to: outputFileURL)
+            do {
+                try imageData?.write(to: outputFileURL)
+                logger.info("Processed and saved: \(outputFileURL.lastPathComponent)")
+            } catch {
+                logger.error("Failed to write processed image to \(outputFileURL.path): \(error.localizedDescription)")
+                return
+            }
 
             // Save OCR text if available
             if let ocrText = ocrText {
                 let txtURL = outputFileURL.deletingPathExtension().appendingPathExtension("txt")
-                try? ocrText.write(to: txtURL, atomically: true, encoding: .utf8)
+                do {
+                    try ocrText.write(to: txtURL, atomically: true, encoding: .utf8)
+                } catch {
+                    logger.warning("Failed to write OCR text file: \(error.localizedDescription)")
+                }
             }
 
             // Delete original if requested
             if folder.deleteOriginals {
-                try? FileManager.default.removeItem(at: url)
+                do {
+                    try FileManager.default.removeItem(at: url)
+                } catch {
+                    logger.warning("Failed to delete original file \(url.lastPathComponent): \(error.localizedDescription)")
+                }
             }
+        } else {
+            logger.error("Failed to create bitmap representation for \(url.lastPathComponent)")
         }
     }
 
@@ -282,7 +313,7 @@ extension FolderActionsSupport {
 
             // Process
             var processedImage = image
-            if profile.autoEnhance || profile.deskew {
+            if profile.autoEnhance || profile.deskew || profile.autoRotate || profile.autoCrop {
                 processedImage = (try? await appState.imageProcessor.process(image, with: profile)) ?? image
             }
 

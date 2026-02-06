@@ -1,6 +1,6 @@
 # ScanFlow
 
-A professional document scanning application for macOS built with SwiftUI and ImageCaptureCore, featuring multi-page ADF scanning, intelligent document processing, and comprehensive scan presets.
+A professional document scanning application for macOS and iOS built with SwiftUI and ImageCaptureCore, featuring multi-page ADF scanning, intelligent document processing, AI-assisted file naming, and a modern Liquid Glass design.
 
 ## Features
 
@@ -11,6 +11,7 @@ A professional document scanning application for macOS built with SwiftUI and Im
 - **Multi-page ADF scanning** - Automatically scans all pages and combines into single PDF
 - **Auto-source detection** - Dynamically detects available scanner sources (flatbed/ADF)
 - **Defaults to flatbed** - When available, flatbed is automatically selected
+- **Liquid Glass UI** - Modern native macOS 26+ design with translucent glass effects
 
 ### Image Processing
 - Auto-deskew with Vision-based perspective correction
@@ -22,10 +23,10 @@ A professional document scanning application for macOS built with SwiftUI and Im
 - Image sharpening
 
 ### AI & Automation
-- AI-assisted file naming (on-device FoundationModels; macOS 26+)
-- Document action suggestions (Calendar events and Contacts)
-- Intelligent document separation (blank pages, barcodes, content analysis)
-- Searchable PDF output with on-device OCR
+- **AI-assisted file naming** - On-device FoundationModels generate intelligent filenames (macOS 26+)
+- **Document action suggestions** - Automatically detect and create Calendar events and Contacts from scanned documents
+- **Intelligent document separation** - Split multi-page scans by blank pages, barcodes, or content analysis
+- **Searchable PDF output** - On-device OCR makes PDFs searchable
 
 ### Output Formats
 - **PDF** - Uncompressed, full quality
@@ -40,15 +41,27 @@ A professional document scanning application for macOS built with SwiftUI and Im
 - Drag & drop export
 - Quick Look preview
 - Keyboard shortcuts
-- Background connection mode with menu bar controls
-- Start at login support (auto-enabled when background connection is enabled)
+- **Background connection mode** - Keep scanner connected when app is closed
+- **Persistent menu bar** - Control scanning from menu bar even when main window is closed
+- **Start at login** - Auto-enabled when background connection is on
+- **Remote scanning** - Trigger scans from iOS and receive PDFs over local network
 
 ## Requirements
 
-- macOS 14.0+
-- macOS 26.0+ for AI-assisted file naming (FoundationModels)
+- macOS 14.0+ (macOS 26.0+ for AI features and Liquid Glass design)
+- iOS 17.0+ (for remote scanning companion app)
 - Xcode 16.0+
 - Swift 5.9+
+
+### Optional Features by OS Version
+
+| Feature | Minimum Version |
+|---------|-----------------|
+| Core scanning | macOS 14.0 |
+| Remote scanning | macOS 14.0 + iOS 17.0 |
+| AI file naming | macOS 26.0 |
+| Liquid Glass UI | macOS 26.0 |
+| Document actions | macOS 14.0 |
 
 ## Getting Started
 
@@ -75,7 +88,84 @@ For testing without hardware, enable "Use mock scanner" in Settings.
 
 ### Background Connection
 
-When closing the app with a connected scanner, ScanFlow can stay running without an open window so it is ready for document detection. When enabled, ScanFlow moves to the menu bar, hides its Dock icon, and can continue scanning when an allowed scanner appears (even if no scanner is connected yet). You can enable this in Settings > Scanner > Background Connection. Start at login is automatically enabled while background connection is on.
+When closing the app after scanning, ScanFlow prompts you to keep the scanner connected in the background. If you choose "Keep Connected":
+
+1. The main window closes but ScanFlow continues running
+2. The app moves to the menu bar (Dock icon hides)
+3. Scanner stays connected and ready for the next scan
+4. Click the menu bar icon to open the scanning interface
+5. Start at login is automatically enabled
+
+You can also enable "Always show menu bar icon" in Settings to have persistent menu bar access without requiring background connection mode.
+
+**Menu Bar Features:**
+- Scanner connection status indicator
+- Quick access to start scanning
+- Show/hide main window
+- Quit application
+
+To disable background mode, go to Settings > Scanner and toggle off "Keep connected in background".
+
+### Document Actions (Calendar & Contacts)
+
+ScanFlow can automatically detect actionable information in scanned documents and offer to create Calendar events or Contacts:
+
+**Calendar Events:**
+- Detects dates, times, and event-related text
+- Creates calendar events with extracted information
+- Supports various date formats (March 15, 2024, 03/15/2024, 2024-03-15)
+
+**Contacts:**
+- Detects names, email addresses, and phone numbers
+- Creates new contacts or updates existing ones
+- Supports various phone formats (+1-555-123-4567, (555) 123-4567)
+
+After scanning a document with detectable information, ScanFlow displays suggested actions in the preview. Click a suggestion to create the event or contact.
+
+**Privacy:** All document analysis happens on-device. No data is sent to external servers.
+
+### Remote Scanning (iOS + Mac)
+
+ScanFlow can run a lightweight scan server on macOS and accept scan requests from iOS over your local network.
+
+1. Launch ScanFlow on macOS (the server starts automatically)
+2. Open ScanFlow on iOS and go to the Scan tab
+3. Use the Remote Scanner panel to connect to your Mac
+4. Choose whether to split documents on the Mac (Document Separation settings are respected unless you force a single PDF)
+5. Tap **Scan on Mac** to trigger the scan and receive PDFs on iOS
+
+The iOS app saves received PDFs into its Documents folder. Ensure both devices are on the same network and local network permissions are granted.
+
+### AI File Naming (macOS 26+)
+
+On macOS 26 and later, ScanFlow can use on-device AI (Apple Intelligence via FoundationModels) to generate intelligent filenames based on document content.
+
+**How it works:**
+1. After scanning, OCR extracts text from the document
+2. The on-device AI model analyzes the content
+3. A descriptive filename is generated (e.g., "2024-03-15 Invoice - Acme Corp")
+
+**Settings (Settings > AI Renaming):**
+
+| Setting | Description | Default |
+|---------|-------------|---------|
+| Enable AI Renaming | Turn AI naming on/off | Off |
+| Date Prefix | Add date to filename | From Document |
+| Date Source | Document content, scan date, or none | Document Content |
+| Include Document Type | Add type (Invoice, Receipt, etc.) | On |
+| Include Key Entities | Add names, amounts, etc. | On |
+| Max Length | Maximum filename length | 60 characters |
+| Advanced Mode | Use custom prompt | Off |
+| Custom Prompt | Your own AI instructions | - |
+| Fallback Behavior | What to do if AI fails | Prompt for manual entry |
+
+**Naming Format:**
+- Uses Title Case
+- Date format: YYYY-MM-DD
+- Uses en dashes (–) as separators
+- Removes special characters unsuitable for filenames
+
+**Privacy:** All AI processing happens on-device using Apple Intelligence. No document content is sent to external servers.
 
 ## Scan Settings Reference
 
@@ -208,28 +298,48 @@ These settings directly configure the scanner hardware via Apple's ImageCaptureC
 ```
 ScanFlow/
 ├── ScanFlow/
-│   ├── ScanFlowApp.swift          # App entry point
+│   ├── ScanFlowApp.swift              # App entry point
+│   ├── AppLifecycleDelegate.swift     # Background mode, menu bar, lifecycle
 │   ├── Models/
-│   │   ├── ScanPreset.swift       # Preset configuration model
-│   │   ├── ScannedFile.swift      # Scanned file metadata
-│   │   ├── QueuedScan.swift       # Scan queue item
-│   │   └── ScanMetadata.swift     # Scan result metadata
+│   │   ├── ScanPreset.swift           # Preset configuration model
+│   │   ├── ScannedFile.swift          # Scanned file metadata
+│   │   ├── QueuedScan.swift           # Scan queue item
+│   │   └── ScanMetadata.swift         # Scan result metadata
 │   ├── ViewModels/
-│   │   ├── AppState.swift         # App state management
-│   │   ├── ScannerManager.swift   # ICC scanner control
-│   │   ├── ImageProcessor.swift   # Image processing
-│   │   └── PDFExporter.swift      # PDF generation
+│   │   ├── AppState.swift             # App state management (@Observable)
+│   │   ├── ScannerManager.swift       # ICC scanner control
+│   │   ├── ImageProcessor.swift       # Image processing pipeline
+│   │   ├── PDFExporter.swift          # PDF generation
+│   │   └── SettingsStore.swift        # Persistent settings (@AppStorage)
+│   ├── Services/
+│   │   ├── AIFileNamer.swift          # AI-assisted file naming
+│   │   ├── DocumentActionService.swift # Calendar/Contacts integration
+│   │   ├── RemoteScanServer.swift     # macOS scan server
+│   │   ├── RemoteScanClient.swift     # iOS scan client
+│   │   └── FolderActionsSupport.swift # Folder monitoring
 │   └── Views/
-│       ├── macOS/                 # macOS-specific views
+│       ├── macOS/
 │       │   ├── MainWindow.swift
-│       │   ├── ScannerSelectionView.swift
+│       │   ├── ScannerSelectionView.swift  # Liquid Glass UI
+│       │   └── SettingsView.swift
+│       ├── iOS/
+│       │   ├── RemoteScanPanel.swift
 │       │   └── ...
-│       └── Shared/                # Cross-platform views
+│       └── Shared/
 │           ├── ScanView.swift
-│           ├── Components/
-│           │   ├── ControlPanelView.swift  # Settings inspector
-│           │   └── ...
-│           └── ...
+│           ├── LibraryView.swift
+│           ├── QueueView.swift
+│           ├── PresetView.swift
+│           └── Components/
+│               ├── ControlPanelView.swift
+│               ├── PreviewView.swift
+│               └── AIRenamingSettingsView.swift
+├── Tests/
+│   ├── SettingsStoreTests.swift
+│   ├── ModelsTests.swift
+│   ├── RemoteScanTests.swift
+│   ├── AIFileNamerTests.swift
+│   └── DocumentActionServiceTests.swift
 └── ScanFlow.xcodeproj
 ```
 
@@ -255,6 +365,53 @@ ScanFlow uses Apple's ImageCaptureCore framework for scanner communication. Key 
 | Duplex Enabled | `ICScannerFunctionalUnitDocumentFeeder` | Two-sided scanning |
 | Page Orientation | `ICScannerFunctionalUnitDocumentFeeder` | EXIF rotation |
 
+## Testing
+
+ScanFlow includes comprehensive automated tests using Swift Testing framework.
+
+### Running Tests
+
+```bash
+# Using Xcode
+# Cmd+U to run all tests
+
+# Using xcodebuild
+xcodebuild test -scheme ScanFlow -destination 'platform=macOS'
+```
+
+### Test Coverage
+
+| Test Suite | Description |
+|------------|-------------|
+| SettingsStoreTests | Settings persistence and defaults |
+| ModelsTests | Data models (QueuedScan, ScannedFile, ScanMetadata, ScanStatus) |
+| RemoteScanTests | Remote scanning models and codec |
+| AIFileNamerTests | AI naming settings and error handling |
+| DocumentActionServiceTests | Calendar/Contacts detection |
+
+### Mock Scanner
+
+For testing without hardware, enable "Use mock scanner" in Settings > Scanner. The mock scanner simulates scanning operations and returns test images.
+
+## Privacy & Security
+
+ScanFlow is designed with privacy in mind:
+
+- **On-device processing** - All image processing, OCR, and AI features run locally
+- **No network calls** - Document content never leaves your device (except when using Remote Scanning between your own devices)
+- **App Sandbox** - Runs in macOS sandbox with minimal permissions
+- **Scoped file access** - Only accesses files you explicitly choose
+
+### Required Permissions
+
+| Permission | Purpose |
+|------------|---------|
+| Camera/Scanner | Access connected scanners via ImageCaptureCore |
+| Local Network | Remote scanning between macOS and iOS |
+| Calendar | Create events from scanned documents (optional) |
+| Contacts | Create contacts from scanned documents (optional) |
+| Downloads folder | Save scans to Downloads (optional) |
+
 ## License
 
-Copyright 2024. All rights reserved.
+Copyright 2024-2025 Oliver Ames. All rights reserved.

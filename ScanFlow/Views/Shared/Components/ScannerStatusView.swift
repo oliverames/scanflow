@@ -75,7 +75,7 @@ struct ScannerStatusView: View {
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
-        .background(.ultraThinMaterial, in: Capsule())
+        .background(iOSGlassBackground)
         #endif
     }
 
@@ -97,13 +97,25 @@ struct ScannerStatusView: View {
     private var statusText: String {
         appState.scannerManager.connectionState.description
     }
+
+    #if os(iOS)
+    @ViewBuilder
+    private var iOSGlassBackground: some View {
+        if #available(iOS 26.0, *) {
+            Capsule()
+                .glassEffect(.regular, in: .rect(cornerRadius: 999))
+        } else {
+            Capsule().fill(.ultraThinMaterial)
+        }
+    }
+    #endif
 }
 
 private struct GlassBadgeStyle: ViewModifier {
     let cornerRadius: CGFloat
 
     func body(content: Content) -> some View {
-        if #available(macOS 16.0, *) {
+        if #available(macOS 26.0, *) {
             content
                 .glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
         } else {

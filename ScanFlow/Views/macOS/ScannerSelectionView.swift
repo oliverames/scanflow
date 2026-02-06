@@ -4,6 +4,7 @@
 //
 //  Scanner selection view shown on app launch.
 //  Continuously discovers available scanners (wired and wireless) using ImageCaptureCore.
+//  Updated for Liquid Glass design system (macOS 26+).
 //
 
 #if os(macOS)
@@ -20,12 +21,14 @@ struct ScannerSelectionView: View {
     @State private var isRefreshing = false
     @State private var autoRefreshTask: Task<Void, Never>?
     @State private var lastRefreshTime: Date = Date()
+    @State private var hoveredScanner: ICScannerDevice?
+    @Namespace private var scannerNamespace
 
     var body: some View {
         ZStack {
             backgroundView
 
-            VStack(spacing: 16) {
+            VStack(spacing: 20) {
                 headerView
 
                 if appState.scannerManager.availableScanners.isEmpty {
@@ -36,9 +39,9 @@ struct ScannerSelectionView: View {
 
                 footerView
             }
-            .padding(16)
+            .padding(20)
         }
-        .frame(minWidth: 360, idealWidth: 460, minHeight: 320, idealHeight: 420)
+        .frame(minWidth: 400, idealWidth: 500, minHeight: 360, idealHeight: 480)
         .onAppear {
             logger.info("ScannerSelectionView appeared, starting scanner discovery")
             startAutoRefresh()
@@ -50,33 +53,56 @@ struct ScannerSelectionView: View {
     }
 
     private var emptyStateView: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "scanner.fill")
-                .font(.system(size: 40))
-                .foregroundStyle(.tertiary)
+        VStack(spacing: 16) {
+            ZStack {
+                Circle()
+                    .fill(Color.secondary.opacity(0.1))
+                    .frame(width: 80, height: 80)
+                
+                Image(systemName: "scanner.fill")
+                    .font(.system(size: 36))
+                    .foregroundStyle(.secondary)
+            }
 
-            Text("No Scanners Found")
-                .font(.title3)
-                .fontWeight(.semibold)
+            VStack(spacing: 6) {
+                Text("No Scanners Found")
+                    .font(.title3)
+                    .fontWeight(.semibold)
 
-            Text("Make sure your scanner is on and connected")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                Text("Make sure your scanner is powered on and connected via USB or network")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 280)
+            }
 
             if appState.scannerManager.connectionState == .discovering {
-                ProgressView()
-                    .controlSize(.small)
-            } else {
-                Button("Search Again") {
-                    refreshScanners()
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("Searching...")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.small)
+            } else {
+                if #available(macOS 26.0, *) {
+                    Button("Search Again") {
+                        refreshScanners()
+                    }
+                    .buttonStyle(.glass)
+                    .controlSize(.regular)
+                } else {
+                    Button("Search Again") {
+                        refreshScanners()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.regular)
+                }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(28)
-        .modifier(GlassCardModifier(cornerRadius: 18))
+        .padding(32)
+        .modifier(GlassCardModifier(cornerRadius: 20))
     }
 
     private func connectToScanner(_ scanner: ICScannerDevice) {
@@ -139,32 +165,47 @@ struct ScannerRowView: View {
     let scanner: ICScannerDevice
     let isSelected: Bool
     let isConnecting: Bool
+    let isHovered: Bool
     let onSelect: () -> Void
 
     var body: some View {
         Button(action: onSelect) {
-            HStack(spacing: 12) {
-                // Scanner icon - compact
-                Image(systemName: scannerIcon)
-                    .font(.system(size: 18))
-                    .foregroundStyle(isSelected ? Color.accentColor : .secondary)
-                    .frame(width: 32, height: 32)
-                    .background(
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(isSelected ? Color.accentColor.opacity(0.15) : Color.secondary.opacity(0.1))
-                    )
+            HStack(spacing: 14) {
+                // Scanner icon with connection type indicator
+                ZStack {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(iconBackgroundColor)
+                        .frame(width: 40, height: 40)
+                    
+                    Image(systemName: scannerIcon)
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundStyle(isSelected ? Color.white : .primary)
+                }
+                .overlay(alignment: .bottomTrailing) {
+                    // Connection type badge
+                    Image(systemName: connectionBadgeIcon)
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(3)
+                        .background(connectionBadgeColor, in: Circle())
+                        .offset(x: 4, y: 4)
+                }
 
                 // Scanner info
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 3) {
                     Text(scanner.name ?? "Unknown Scanner")
-                        .font(.subheadline)
+                        .font(.body)
                         .fontWeight(.medium)
                         .foregroundStyle(.primary)
                         .lineLimit(1)
 
-                    Text(connectionType)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
+                    HStack(spacing: 4) {
+                        Image(systemName: connectionIcon)
+                            .font(.system(size: 10))
+                        Text(connectionType)
+                            .font(.caption)
+                    }
+                    .foregroundStyle(.secondary)
                 }
 
                 Spacer()
@@ -175,31 +216,45 @@ struct ScannerRowView: View {
                         .controlSize(.small)
                 } else if isSelected {
                     Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 20))
                         .foregroundStyle(.green)
+                        .symbolEffect(.pulse)
+                } else if isHovered {
+                    Text("Connect")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundStyle(.secondary)
                 } else {
                     Image(systemName: "chevron.right")
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .modifier(ScannerRowStyle(isSelected: isSelected))
+        .modifier(ScannerRowStyle(isSelected: isSelected, isHovered: isHovered))
+    }
+
+    private var iconBackgroundColor: Color {
+        if isSelected {
+            return Color.accentColor
+        } else if isHovered {
+            return Color.secondary.opacity(0.15)
+        } else {
+            return Color.secondary.opacity(0.08)
+        }
     }
 
     private var scannerIcon: String {
-        if scanner.usbLocationID != 0 {
-            return "scanner.fill"
-        } else {
-            return "wifi"
-        }
+        "scanner.fill"
     }
 
     private var connectionType: String {
         if scanner.usbLocationID != 0 {
-            return "USB"
+            return "USB Connected"
         } else {
             return "Network"
         }
@@ -212,13 +267,29 @@ struct ScannerRowView: View {
             return "wifi"
         }
     }
+
+    private var connectionBadgeIcon: String {
+        if scanner.usbLocationID != 0 {
+            return "link"
+        } else {
+            return "antenna.radiowaves.left.and.right"
+        }
+    }
+
+    private var connectionBadgeColor: Color {
+        if scanner.usbLocationID != 0 {
+            return .blue
+        } else {
+            return .green
+        }
+    }
 }
 
 private struct GlassCardModifier: ViewModifier {
     let cornerRadius: CGFloat
 
     func body(content: Content) -> some View {
-        if #available(macOS 16.0, *) {
+        if #available(macOS 26.0, *) {
             content
                 .glassEffect(.regular.interactive(), in: .rect(cornerRadius: cornerRadius))
         } else {
@@ -237,51 +308,108 @@ private struct GlassCardModifier: ViewModifier {
 
 private struct ScannerRowStyle: ViewModifier {
     let isSelected: Bool
+    let isHovered: Bool
 
     func body(content: Content) -> some View {
-        if #available(macOS 16.0, *) {
+        if #available(macOS 26.0, *) {
             content
                 .glassEffect(
-                    isSelected ? .regular.tint(.accentColor).interactive() : .regular.interactive(),
-                    in: .rect(cornerRadius: 12)
+                    glassVariant,
+                    in: .rect(cornerRadius: 14)
                 )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .strokeBorder(isSelected ? Color.accentColor.opacity(0.7) : Color.white.opacity(0.12), lineWidth: 1)
-                )
+                .shadow(color: isSelected ? Color.accentColor.opacity(0.2) : .clear, radius: 8, y: 2)
+                .scaleEffect(isHovered && !isSelected ? 1.01 : 1.0)
+                .animation(.easeOut(duration: 0.15), value: isHovered)
         } else {
             content
                 .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(isSelected ? Color.accentColor.opacity(0.12) : Color(nsColor: .controlBackgroundColor))
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(backgroundColor)
                 )
                 .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .strokeBorder(isSelected ? Color.accentColor.opacity(0.7) : Color.clear, lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 14)
+                        .strokeBorder(borderColor, lineWidth: isSelected ? 2 : 1)
                 )
+                .shadow(color: isSelected ? Color.accentColor.opacity(0.15) : .clear, radius: 6, y: 2)
+                .scaleEffect(isHovered && !isSelected ? 1.01 : 1.0)
+                .animation(.easeOut(duration: 0.15), value: isHovered)
+        }
+    }
+
+    @available(macOS 26.0, *)
+    private var glassVariant: Glass {
+        if isSelected {
+            return .regular.tint(.accentColor).interactive()
+        } else if isHovered {
+            return .regular.interactive()
+        } else {
+            return .regular
+        }
+    }
+
+    private var backgroundColor: Color {
+        if isSelected {
+            return Color.accentColor.opacity(0.15)
+        } else if isHovered {
+            return Color(nsColor: .controlBackgroundColor).opacity(0.8)
+        } else {
+            return Color(nsColor: .controlBackgroundColor).opacity(0.5)
+        }
+    }
+
+    private var borderColor: Color {
+        if isSelected {
+            return Color.accentColor.opacity(0.8)
+        } else if isHovered {
+            return Color.secondary.opacity(0.3)
+        } else {
+            return Color.clear
         }
     }
 }
 
 private extension ScannerSelectionView {
     var headerView: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "scanner")
-                .font(.system(size: 28))
-                .foregroundStyle(.secondary)
+        HStack(spacing: 14) {
+            // Scanner icon with animated ring when discovering
+            ZStack {
+                Circle()
+                    .fill(Color.accentColor.opacity(0.1))
+                    .frame(width: 48, height: 48)
+                
+                if appState.scannerManager.connectionState == .discovering {
+                    Circle()
+                        .strokeBorder(Color.accentColor.opacity(0.5), lineWidth: 2)
+                        .frame(width: 48, height: 48)
+                        .scaleEffect(isRefreshing ? 1.2 : 1.0)
+                        .opacity(isRefreshing ? 0 : 1)
+                        .animation(.easeOut(duration: 1.0).repeatForever(autoreverses: false), value: isRefreshing)
+                }
+                
+                Image(systemName: "scanner")
+                    .font(.system(size: 22, weight: .medium))
+                    .foregroundStyle(Color.accentColor)
+            }
 
             VStack(alignment: .leading, spacing: 4) {
                 Text("Select a Scanner")
                     .font(.title2)
                     .fontWeight(.semibold)
 
-                Text("Available scanners are discovered automatically")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                Text("Updated \(lastRefreshTime, style: .time)")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                HStack(spacing: 6) {
+                    if appState.scannerManager.connectionState == .discovering {
+                        Text("Discovering scanners...")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text("Last updated")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                        Text(lastRefreshTime, style: .time)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
             }
 
             Spacer()
@@ -294,31 +422,33 @@ private extension ScannerSelectionView {
                     refreshScanners()
                 } label: {
                     Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 14, weight: .medium))
                 }
                 .buttonStyle(.borderless)
+                .help("Refresh scanner list")
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .modifier(GlassCardModifier(cornerRadius: 18))
+        .padding(.horizontal, 18)
+        .padding(.vertical, 14)
+        .modifier(GlassCardModifier(cornerRadius: 20))
     }
 
     var scannerListView: some View {
         ScrollView {
-            if #available(macOS 16.0, *) {
-                GlassEffectContainer(spacing: 14) {
-                    LazyVStack(spacing: 12) {
+            if #available(macOS 26.0, *) {
+                GlassEffectContainer(spacing: 16) {
+                    LazyVStack(spacing: 10) {
                         scannerRows
                     }
-                    .padding(2)
+                    .padding(4)
                 }
             } else {
-                LazyVStack(spacing: 12) {
+                LazyVStack(spacing: 10) {
                     scannerRows
                 }
             }
         }
-        .scrollIndicators(.hidden)
+        .scrollIndicators(.automatic)
     }
 
     var scannerRows: some View {
@@ -326,54 +456,115 @@ private extension ScannerSelectionView {
             ScannerRowView(
                 scanner: scanner,
                 isSelected: scanner == appState.scannerManager.selectedScanner,
-                isConnecting: appState.scannerManager.connectionState == .connecting
+                isConnecting: appState.scannerManager.connectionState == .connecting,
+                isHovered: hoveredScanner == scanner
             ) {
                 connectToScanner(scanner)
+            }
+            .onHover { isHovered in
+                hoveredScanner = isHovered ? scanner : nil
             }
         }
     }
 
     var footerView: some View {
-        HStack(spacing: 8) {
-            Circle()
-                .fill(appState.scannerManager.availableScanners.isEmpty ? .orange : .green)
-                .frame(width: 6, height: 6)
+        HStack(spacing: 10) {
+            // Status indicator
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(statusColor)
+                    .frame(width: 8, height: 8)
+                    .shadow(color: statusColor.opacity(0.5), radius: 3)
 
-            Text("\(appState.scannerManager.availableScanners.count) scanner\(appState.scannerManager.availableScanners.count == 1 ? "" : "s")")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                Text(statusText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
 
             Spacer()
 
             if appState.useMockScanner {
-                Button {
-                    logger.info("Using mock scanner for testing")
-                    Task {
-                        await appState.scannerManager.connectMockScanner()
-                        hasSelectedScanner = true
+                if #available(macOS 26.0, *) {
+                    Button {
+                        logger.info("Using mock scanner for testing")
+                        Task {
+                            await appState.scannerManager.connectMockScanner()
+                            hasSelectedScanner = true
+                        }
+                    } label: {
+                        Label("Mock Scanner", systemImage: "ladybug")
                     }
-                } label: {
-                    Label("Mock Scanner", systemImage: "ladybug")
+                    .buttonStyle(.glass)
+                    .controlSize(.small)
+                } else {
+                    Button {
+                        logger.info("Using mock scanner for testing")
+                        Task {
+                            await appState.scannerManager.connectMockScanner()
+                            hasSelectedScanner = true
+                        }
+                    } label: {
+                        Label("Mock Scanner", systemImage: "ladybug")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.small)
             }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .modifier(GlassCardModifier(cornerRadius: 16))
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .modifier(GlassCardModifier(cornerRadius: 18))
+    }
+
+    private var statusColor: Color {
+        if appState.scannerManager.connectionState == .discovering {
+            return .blue
+        } else if appState.scannerManager.availableScanners.isEmpty {
+            return .orange
+        } else if appState.scannerManager.connectionState.isConnected {
+            return .green
+        } else {
+            return .green
+        }
+    }
+
+    private var statusText: String {
+        let count = appState.scannerManager.availableScanners.count
+        if appState.scannerManager.connectionState == .discovering {
+            return "Searching..."
+        } else if count == 0 {
+            return "No scanners found"
+        } else if count == 1 {
+            return "1 scanner available"
+        } else {
+            return "\(count) scanners available"
+        }
     }
 
     var backgroundView: some View {
-        LinearGradient(
-            colors: [
-                Color(nsColor: .windowBackgroundColor),
-                Color(nsColor: .controlBackgroundColor).opacity(0.6),
-                Color(nsColor: .windowBackgroundColor)
-            ],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
+        ZStack {
+            // Base gradient
+            LinearGradient(
+                colors: [
+                    Color(nsColor: .windowBackgroundColor),
+                    Color(nsColor: .controlBackgroundColor).opacity(0.4),
+                    Color(nsColor: .windowBackgroundColor)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            
+            // Subtle accent color wash
+            RadialGradient(
+                colors: [
+                    Color.accentColor.opacity(0.03),
+                    Color.clear
+                ],
+                center: .topTrailing,
+                startRadius: 100,
+                endRadius: 400
+            )
+        }
         .ignoresSafeArea()
     }
 }

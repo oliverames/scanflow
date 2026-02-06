@@ -104,6 +104,20 @@ struct ScannerSettings: View {
                         await appState.scannerManager.discoverScanners()
                     }
                 }
+
+                Toggle(
+                    "Enable Remote Scan Server",
+                    isOn: Binding(
+                        get: { appState.remoteScanServerEnabled },
+                        set: { newValue in
+                            appState.handleRemoteScanServerToggle(newValue)
+                        }
+                    )
+                )
+
+                Text("Allows iOS devices on your network to request scans.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Section("Background Connection") {
@@ -132,6 +146,22 @@ struct ScannerSettings: View {
                 Toggle("Show background prompt on quit", isOn: $appState.shouldPromptForBackgroundConnection)
 
                 Text("Auto-start uses scanner readiness signals and may vary by device.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section("Menu Bar") {
+                Toggle(
+                    "Always show menu bar icon",
+                    isOn: Binding(
+                        get: { appState.menuBarAlwaysEnabled },
+                        set: { newValue in
+                            appState.menuBarAlwaysEnabled = newValue
+                            NotificationCenter.default.post(name: .scanflowMenuBarSettingChanged, object: nil)
+                        }
+                    )
+                )
+                Text("When enabled, the ScanFlow menu bar icon remains visible even when the app is open or background mode is disabled.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

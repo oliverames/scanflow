@@ -142,7 +142,7 @@ private final class RemoteScanSession {
             if let data, !data.isEmpty {
                 buffer.append(data)
                 let messages = codec.decodeMessages(from: &buffer)
-                messages.forEach { handle($0) }
+                messages.forEach { self.handle($0) }
             }
 
             if isComplete || error != nil {

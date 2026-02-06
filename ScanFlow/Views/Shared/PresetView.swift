@@ -6,6 +6,9 @@
 //
 
 import SwiftUI
+import os.log
+
+private let logger = Logger(subsystem: "com.scanflow.app", category: "PresetView")
 
 struct PresetView: View {
     @Environment(AppState.self) private var appState
@@ -66,7 +69,7 @@ struct PresetView: View {
 
     private func binding(for preset: ScanPreset) -> Binding<ScanPreset> {
         guard let index = appState.presets.firstIndex(where: { $0.id == preset.id }) else {
-            assertionFailure("Preset not found")
+            logger.error("Preset not found: \(preset.id)")
             return Binding(
                 get: { preset },
                 set: { _ in }
@@ -79,7 +82,12 @@ struct PresetView: View {
     }
 
     private func createNewPreset() {
-        let newPreset = ScanPreset(name: "New Preset")
+        let newPreset = ScanPreset(
+            name: "New Preset",
+            destination: appState.scanDestination,
+            separationSettings: appState.defaultSeparationSettings,
+            namingSettings: appState.defaultNamingSettings
+        )
         appState.presets.append(newPreset)
         selectedPreset = newPreset.id
         appState.savePresets()
@@ -195,15 +203,22 @@ private struct GlassHeaderStyle: ViewModifier {
     let cornerRadius: CGFloat
 
     func body(content: Content) -> some View {
-        content
-            .padding(.vertical, 8)
-            .padding(.horizontal, 12)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .strokeBorder(.white.opacity(0.18), lineWidth: 1)
-            )
-            .shadow(color: .black.opacity(0.12), radius: 12, x: 0, y: 8)
+        if #available(macOS 26.0, *) {
+            content
+                .padding(.vertical, 8)
+                .padding(.horizontal, 12)
+                .glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
+        } else {
+            content
+                .padding(.vertical, 8)
+                .padding(.horizontal, 12)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .strokeBorder(.white.opacity(0.18), lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(0.12), radius: 12, x: 0, y: 8)
+        }
     }
 }
 
@@ -212,13 +227,22 @@ private struct GlassCardStyle: ViewModifier {
     let isSelected: Bool
 
     func body(content: Content) -> some View {
-        content
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .strokeBorder(isSelected ? Color.accentColor.opacity(0.5) : Color.white.opacity(0.16), lineWidth: 1)
-            )
-            .shadow(color: .black.opacity(0.12), radius: 10, x: 0, y: 6)
+        if #available(macOS 26.0, *) {
+            content
+                .glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
+                .overlay(
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .strokeBorder(isSelected ? Color.accentColor.opacity(0.5) : Color.white.opacity(0.16), lineWidth: 1)
+                )
+        } else {
+            content
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .strokeBorder(isSelected ? Color.accentColor.opacity(0.5) : Color.white.opacity(0.16), lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(0.12), radius: 10, x: 0, y: 6)
+        }
     }
 }
 
@@ -226,12 +250,21 @@ private struct GlassPanelStyle: ViewModifier {
     let cornerRadius: CGFloat
 
     func body(content: Content) -> some View {
-        content
-            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .strokeBorder(Color.white.opacity(0.14), lineWidth: 1)
-            )
-            .shadow(color: .black.opacity(0.14), radius: 18, x: 0, y: 12)
+        if #available(macOS 26.0, *) {
+            content
+                .glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
+                .overlay(
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .strokeBorder(Color.white.opacity(0.14), lineWidth: 1)
+                )
+        } else {
+            content
+                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .strokeBorder(Color.white.opacity(0.14), lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(0.14), radius: 18, x: 0, y: 12)
+        }
     }
 }

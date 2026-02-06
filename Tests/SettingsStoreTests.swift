@@ -57,4 +57,24 @@ struct SettingsStoreTests {
         let reloaded = SettingsStore()
         #expect(reloaded.defaultSeparationSettings == settings)
     }
+
+    @Test("Remote scan server enabled flag persists")
+    func remoteScanServerEnabledPersists() {
+        let defaults = UserDefaults.standard
+        let key = "remoteScanServerEnabled"
+        let previous = defaults.object(forKey: key)
+        defer {
+            if let previous {
+                defaults.set(previous, forKey: key)
+            } else {
+                defaults.removeObject(forKey: key)
+            }
+        }
+
+        let store = SettingsStore()
+        store.remoteScanServerEnabled = false
+
+        let reloaded = SettingsStore()
+        #expect(reloaded.remoteScanServerEnabled == false)
+    }
 }

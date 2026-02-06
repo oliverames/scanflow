@@ -171,7 +171,7 @@ struct DetailView: View {
 
 private struct GlassToolbarPill: ViewModifier {
     func body(content: Content) -> some View {
-        if #available(macOS 16.0, *) {
+        if #available(macOS 26.0, *) {
             content
                 .glassEffect(.regular, in: .rect(cornerRadius: 8))
         } else {

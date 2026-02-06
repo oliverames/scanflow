@@ -36,6 +36,8 @@ final class RemoteScanClient {
     var statusMessage: String?
     var lastError: String?
     var isScanning: Bool = false
+    var bytesReceived: Int = 0
+    var expectedBytes: Int?
 
     var onScanResult: ((RemoteScanResult) -> Void)?
 
@@ -88,12 +90,22 @@ final class RemoteScanClient {
         connectionState = .disconnected
         statusMessage = nil
         isScanning = false
+        bytesReceived = 0
+        expectedBytes = nil
     }
 
-    func requestScan(presetName: String?, searchablePDF: Bool) {
+    func requestScan(presetName: String?, searchablePDF: Bool, forceSingleDocument: Bool) {
         guard connectionState == .connected else { return }
         isScanning = true
-        let request = RemoteScanRequest(presetName: presetName, searchablePDF: searchablePDF)
+        bytesReceived = 0
+        expectedBytes = nil
+        lastError = nil
+        statusMessage = "Requesting scan"
+        let request = RemoteScanRequest(
+            presetName: presetName,
+            searchablePDF: searchablePDF,
+            forceSingleDocument: forceSingleDocument
+        )
         send(.request(request))
     }
 
@@ -109,6 +121,9 @@ final class RemoteScanClient {
         availableServices = services.sorted { $0.name < $1.name }
         if let selected = selectedService, !availableServices.contains(selected) {
             selectedService = nil
+        }
+        if selectedService == nil, let first = availableServices.first {
+            selectedService = first
         }
     }
 
@@ -142,9 +157,9 @@ final class RemoteScanClient {
             guard let self else { return }
 
             if let data, !data.isEmpty {
-                buffer.append(data)
-                let messages = codec.decodeMessages(from: &buffer)
-                messages.forEach { handle($0) }
+                Task { @MainActor in
+                    self.handleIncomingData(data)
+                }
             }
 
             if isComplete || error != nil {
@@ -154,8 +169,18 @@ final class RemoteScanClient {
                 return
             }
 
-            receive()
+            Task { @MainActor in
+                self.receive()
+            }
         }
+    }
+
+    @MainActor
+    private func handleIncomingData(_ data: Data) {
+        bytesReceived += data.count
+        buffer.append(data)
+        let messages = codec.decodeMessages(from: &buffer)
+        messages.forEach { handle($0) }
     }
 
     private func handle(_ message: RemoteScanMessage) {
@@ -164,6 +189,7 @@ final class RemoteScanClient {
             statusMessage = message.status?.message
         case .scanResult:
             if let result = message.result {
+                expectedBytes = result.totalBytes
                 isScanning = false
                 onScanResult?(result)
             }

@@ -42,6 +42,14 @@ class AppState {
     #if os(macOS)
     var imageProcessor: ImageProcessor
     var documentActionService: DocumentActionService
+    @ObservationIgnored lazy var remoteScanServer: RemoteScanServer = RemoteScanServer(scanHandler: { [weak self] request in
+        guard let self else {
+            throw RemoteScanServer.ServerError.serverUnavailable
+        }
+        return try await self.performRemoteScan(request)
+    })
+    #else
+    var remoteScanClient: RemoteScanClient
     #endif
     var scanQueue: [QueuedScan] = []
     var scannedFiles: [ScannedFile] = []
@@ -115,10 +123,23 @@ class AppState {
         set { _settings.startAtLogin = newValue }
     }
 
+    var remoteScanServerEnabled: Bool {
+        get { _settings.remoteScanServerEnabled }
+        set { _settings.remoteScanServerEnabled = newValue }
+    }
+
     var autoStartScannerIDs: Set<String> {
         get { _settings.autoStartScannerIDs }
         set { _settings.autoStartScannerIDs = newValue }
     }
+
+    var menuBarAlwaysEnabled: Bool {
+        get { _settings.menuBarAlwaysEnabled }
+        set { _settings.menuBarAlwaysEnabled = newValue }
+    }
+
+    /// Tracks whether a scan was performed during this app session (not persisted)
+    var didScanThisSession: Bool = false
 
     // AI-assisted file naming settings (defaults for new presets)
     var defaultNamingSettings: NamingSettings {
@@ -138,6 +159,9 @@ class AppState {
         let processor = ImageProcessor()
         imageProcessor = processor
         documentActionService = DocumentActionService(imageProcessor: processor)
+        if remoteScanServerEnabled {
+            remoteScanServer.start()
+        }
         scannerManager.useMockScanner = useMockScanner
         scannerManager.onDeviceReady = { [weak self] device in
             self?.handleScannerReadyForAutoScan(device: device)
@@ -152,6 +176,15 @@ class AppState {
             scannerManager.startBrowsing()
         }
         updateLoginItemRegistration(enabled: startAtLogin)
+        #endif
+        #if os(iOS)
+        remoteScanClient = RemoteScanClient()
+        remoteScanClient.onScanResult = { [weak self] result in
+            Task { @MainActor in
+                self?.handleRemoteScanResult(result)
+            }
+        }
+        remoteScanClient.startBrowsing()
         #endif
         loadPresets()
         logger.info("AppState initialized with \(self.presets.count) presets")
@@ -231,6 +264,7 @@ class AppState {
                 }
 
                 scanQueue[index].status = .completed
+                didScanThisSession = true
                 logger.info("Scan \(index + 1) completed successfully")
                 #endif
             } catch {
@@ -420,6 +454,96 @@ class AppState {
 
         return savedFiles
     }
+
+    func performRemoteScan(_ request: RemoteScanRequest) async throws -> RemoteScanResult {
+        if isScanning {
+            throw RemoteScanServer.ServerError.busy
+        }
+
+        isScanning = true
+        defer { isScanning = false }
+
+        let preset = presets.first { $0.name == request.presetName } ?? currentPreset
+        let result = try await scannerManager.scan(with: preset)
+        let savedFiles = try await saveScannedImage(result, preset: preset)
+        scannedFiles.append(contentsOf: savedFiles)
+
+        let documents = try await createRemoteDocuments(
+            from: result.images,
+            preset: preset,
+            searchable: request.searchablePDF,
+            forceSingleDocument: request.forceSingleDocument
+        )
+        let scannedAt = Date()
+        let totalBytes = documents.reduce(0) { $0 + $1.byteCount }
+
+        return RemoteScanResult(documents: documents, totalBytes: totalBytes, scannedAt: scannedAt)
+    }
+
+    private func createRemoteDocuments(
+        from pages: [NSImage],
+        preset: ScanPreset,
+        searchable: Bool,
+        forceSingleDocument: Bool
+    ) async throws -> [RemoteScanDocument] {
+        var documents: [[NSImage]] = [pages]
+        if !forceSingleDocument {
+            if preset.separationSettings.enabled {
+                let separator = DocumentSeparator(imageProcessor: imageProcessor, barcodeRecognizer: BarcodeRecognizer())
+                let separationResult = try await separator.separateDocuments(pages: pages, settings: preset.separationSettings)
+                documents = separationResult.documents
+            } else if preset.splitOnPage, pages.count > 1 {
+                documents = splitPages(pages: pages, chunkSize: preset.splitPageNumber)
+            }
+        }
+
+        var results: [RemoteScanDocument] = []
+
+        for (index, docPages) in documents.enumerated() {
+            let pdfData = try await createRemotePDFData(from: docPages, searchable: searchable)
+            let filename = remoteDocumentFilename(base: preset.name, index: documents.count > 1 ? index : nil)
+            results.append(
+                RemoteScanDocument(
+                    filename: filename,
+                    pdfDataBase64: pdfData.base64EncodedString(),
+                    pageCount: docPages.count,
+                    byteCount: pdfData.count
+                )
+            )
+        }
+
+        return results
+    }
+
+    private func remoteDocumentFilename(base: String, index: Int?) -> String {
+        let sanitizedBase = sanitizeFilenameInput(base.isEmpty ? "Remote Scan" : base)
+        if let index {
+            return "\(sanitizedBase)-\(String(format: "%03d", index + 1)).pdf"
+        }
+        return "\(sanitizedBase).pdf"
+    }
+
+    private func createRemotePDFData(from pages: [NSImage], searchable: Bool) async throws -> Data {
+        let pdfDocument = PDFDocument()
+
+        for (index, image) in pages.enumerated() {
+            if let pdfPage = PDFPage(image: image) {
+                if searchable {
+                    if let text = try? await imageProcessor.recognizeText(image), !text.isEmpty {
+                        addTextAnnotation(to: pdfPage, text: text)
+                    }
+                }
+                pdfDocument.insert(pdfPage, at: index)
+            }
+        }
+
+        applyPDFMetadata(to: pdfDocument)
+        if let data = pdfDocument.dataRepresentation() {
+            return data
+        }
+
+        throw ScannerError.scanFailed
+    }
     #endif
 
     private func splitPages(pages: [NSImage], chunkSize: Int) -> [[NSImage]] {
@@ -517,7 +641,7 @@ class AppState {
         return nil
     }
 
-    private func sanitizeFilenameInput(_ filename: String) -> String {
+    func sanitizeFilenameInput(_ filename: String) -> String {
         let invalidCharacters = CharacterSet(charactersIn: ":/\\?*\"<>|")
         let sanitized = filename.components(separatedBy: invalidCharacters).joined(separator: "")
         return sanitized.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -571,6 +695,7 @@ class AppState {
         document.documentAttributes = attributes
     }
 
+    #if os(macOS)
     private func addTextAnnotation(to page: PDFPage, text: String) {
         let bounds = page.bounds(for: .mediaBox)
         let annotation = PDFAnnotation(bounds: bounds, forType: .freeText, withProperties: nil)
@@ -579,6 +704,61 @@ class AppState {
         annotation.font = NSFont.systemFont(ofSize: 12)
         page.addAnnotation(annotation)
     }
+    #endif
+
+    #if os(iOS)
+    private func handleRemoteScanResult(_ result: RemoteScanResult) {
+        let baseURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
+            ?? FileManager.default.temporaryDirectory
+
+        var savedCount = 0
+
+        for document in result.documents {
+            guard let data = Data(base64Encoded: document.pdfDataBase64) else { continue }
+
+            let filename = sanitizedRemoteFilename(document.filename)
+            let targetURL = baseURL.appendingPathComponent(filename)
+
+            do {
+                try data.write(to: targetURL, options: [.atomic])
+                let fileSize = (try? FileManager.default.attributesOfItem(atPath: targetURL.path)[.size] as? Int64) ?? Int64(data.count)
+                let scannedFile = ScannedFile(
+                    filename: targetURL.lastPathComponent,
+                    fileURL: targetURL,
+                    size: fileSize,
+                    resolution: 300,
+                    dateScanned: result.scannedAt,
+                    scannerModel: "Remote Mac",
+                    format: .pdf
+                )
+                scannedFiles.append(scannedFile)
+                savedCount += 1
+            } catch {
+                showAlert(message: "Failed to save remote scan: \(error.localizedDescription)")
+                return
+            }
+        }
+
+        if savedCount > 0 {
+            showAlert(message: "Remote scan saved (\(savedCount) document(s))")
+        } else {
+            showAlert(message: "No remote documents were saved")
+        }
+    }
+
+    private func sanitizedRemoteFilename(_ filename: String) -> String {
+        let invalidCharacters = CharacterSet(charactersIn: ":/\\?*\"<>|")
+        let sanitized = filename.components(separatedBy: invalidCharacters).joined(separator: "")
+        let trimmed = sanitized.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            return "Remote Scan.pdf"
+        }
+        if trimmed.lowercased().hasSuffix(".pdf") {
+            return trimmed
+        }
+        return trimmed + ".pdf"
+    }
+    #endif
 
     func showAlert(message: String) {
         alertMessage = message
@@ -641,6 +821,15 @@ class AppState {
     func handleStartAtLoginToggle(_ enabled: Bool) {
         startAtLogin = enabled
         updateLoginItemRegistration(enabled: enabled)
+    }
+
+    func handleRemoteScanServerToggle(_ enabled: Bool) {
+        remoteScanServerEnabled = enabled
+        if enabled {
+            remoteScanServer.start()
+        } else {
+            remoteScanServer.stop()
+        }
     }
 
     func isAutoStartEnabled(for scanner: ICScannerDevice) -> Bool {

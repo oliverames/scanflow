@@ -11,6 +11,7 @@ import SwiftUI
 struct RemoteScanPanel: View {
     @Environment(AppState.self) private var appState
     @State private var selectedServiceID: RemoteScanClient.RemoteScanService.ID?
+    @State private var splitDocuments = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -19,6 +20,10 @@ struct RemoteScanPanel: View {
                     .font(.headline)
 
                 Spacer()
+
+                Text(connectionLabel)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
 
                 Button("Refresh") {
                     appState.remoteScanClient.startBrowsing()
@@ -38,6 +43,9 @@ struct RemoteScanPanel: View {
                 }
                 .pickerStyle(.menu)
 
+                Toggle("Split documents", isOn: $splitDocuments)
+                    .font(.caption)
+
                 HStack {
                     Button(appState.remoteScanClient.connectionState == .connected ? "Disconnect" : "Connect") {
                         handleConnectionToggle()
@@ -50,7 +58,8 @@ struct RemoteScanPanel: View {
                     Button("Scan on Mac") {
                         appState.remoteScanClient.requestScan(
                             presetName: appState.currentPreset.name,
-                            searchablePDF: appState.currentPreset.searchablePDF
+                            searchablePDF: appState.currentPreset.searchablePDF,
+                            forceSingleDocument: !splitDocuments
                         )
                     }
                     .buttonStyle(.borderedProminent)
@@ -64,6 +73,21 @@ struct RemoteScanPanel: View {
                     .foregroundStyle(.secondary)
             }
 
+            if appState.remoteScanClient.isScanning || appState.remoteScanClient.bytesReceived > 0 {
+                VStack(alignment: .leading, spacing: 4) {
+                    if let expected = appState.remoteScanClient.expectedBytes, expected > 0 {
+                        ProgressView(value: Double(transferReceived), total: Double(expected))
+                        Text("Received \(formattedBytes(transferReceived)) of \(formattedBytes(expected))")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text("Received \(formattedBytes(appState.remoteScanClient.bytesReceived))")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+
             if let error = appState.remoteScanClient.lastError {
                 Text(error)
                     .font(.caption2)
@@ -73,6 +97,16 @@ struct RemoteScanPanel: View {
         .padding(12)
         .background(remoteGlassBackground)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .onAppear {
+            if let selected = appState.remoteScanClient.selectedService {
+                selectedServiceID = selected.id
+            }
+        }
+        .onChange(of: appState.remoteScanClient.availableServices) { _, newServices in
+            if selectedServiceID == nil, let first = newServices.first {
+                selectedServiceID = first.id
+            }
+        }
     }
 
     private var remoteGlassBackground: some View {
@@ -97,6 +131,30 @@ struct RemoteScanPanel: View {
             return
         }
         appState.remoteScanClient.connect(to: service)
+    }
+
+    private var transferReceived: Int {
+        if let expected = appState.remoteScanClient.expectedBytes {
+            return min(appState.remoteScanClient.bytesReceived, expected)
+        }
+        return appState.remoteScanClient.bytesReceived
+    }
+
+    private func formattedBytes(_ value: Int) -> String {
+        ByteCountFormatter.string(fromByteCount: Int64(value), countStyle: .file)
+    }
+
+    private var connectionLabel: String {
+        switch appState.remoteScanClient.connectionState {
+        case .connected:
+            return "Connected"
+        case .connecting:
+            return "Connecting…"
+        case .browsing:
+            return "Browsing…"
+        case .disconnected:
+            return "Disconnected"
+        }
     }
 }
 

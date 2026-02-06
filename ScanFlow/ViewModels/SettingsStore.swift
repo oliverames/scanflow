@@ -27,8 +27,10 @@ final class SettingsStore: ObservableObject {
     @AppStorage("keepConnectedInBackground") var keepConnectedInBackground: Bool = false
     @AppStorage("shouldPromptForBackgroundConnection") var shouldPromptForBackgroundConnection: Bool = true
     @AppStorage("hasConnectedScanner") var hasConnectedScanner: Bool = false
+    @AppStorage("menuBarAlwaysEnabled") var menuBarAlwaysEnabled: Bool = false
     @AppStorage("autoStartScanWhenReady") var autoStartScanWhenReady: Bool = false
     @AppStorage("startAtLogin") var startAtLogin: Bool = false
+    @AppStorage("remoteScanServerEnabled") var remoteScanServerEnabled: Bool = true
     
     // MARK: - Complex Settings (Codable)
     
@@ -113,6 +115,8 @@ final class SettingsStore: ObservableObject {
         hasConnectedScanner = false
         autoStartScanWhenReady = false
         startAtLogin = false
+        remoteScanServerEnabled = true
+        menuBarAlwaysEnabled = false
         
         UserDefaults.standard.removeObject(forKey: Self.namingSettingsKey)
         UserDefaults.standard.removeObject(forKey: Self.separationSettingsKey)

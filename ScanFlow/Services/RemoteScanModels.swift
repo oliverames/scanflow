@@ -18,10 +18,12 @@ enum RemoteScanMessageType: String, Codable {
 struct RemoteScanRequest: Codable {
     let presetName: String?
     let searchablePDF: Bool
+    let forceSingleDocument: Bool
 
-    init(presetName: String?, searchablePDF: Bool) {
+    init(presetName: String?, searchablePDF: Bool, forceSingleDocument: Bool) {
         self.presetName = presetName
         self.searchablePDF = searchablePDF
+        self.forceSingleDocument = forceSingleDocument
     }
 }
 
@@ -29,10 +31,12 @@ struct RemoteScanDocument: Codable {
     let filename: String
     let pdfDataBase64: String
     let pageCount: Int
+    let byteCount: Int
 }
 
 struct RemoteScanResult: Codable {
     let documents: [RemoteScanDocument]
+    let totalBytes: Int
     let scannedAt: Date
 }
 

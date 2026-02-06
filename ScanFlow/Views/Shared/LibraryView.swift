@@ -242,7 +242,7 @@ private struct GlassHeaderStyle: ViewModifier {
     let cornerRadius: CGFloat
 
     func body(content: Content) -> some View {
-        if #available(macOS 16.0, *) {
+        if #available(macOS 26.0, *) {
             content
                 .glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
         } else {
@@ -257,7 +257,7 @@ private struct GlassCardStyle: ViewModifier {
     let isSelected: Bool
 
     func body(content: Content) -> some View {
-        if #available(macOS 16.0, *) {
+        if #available(macOS 26.0, *) {
             content
                 .glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
                 .overlay(

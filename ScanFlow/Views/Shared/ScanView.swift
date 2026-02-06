@@ -34,10 +34,12 @@ struct ScanView: View {
             logger.info("ScanView appeared")
         }
         #else
-        VStack {
+        VStack(spacing: 12) {
             PreviewView()
+            RemoteScanPanel()
             ControlPanelView()
         }
+        .padding(.horizontal, 12)
         #endif
     }
 }
