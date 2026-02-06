@@ -695,8 +695,3 @@ extension View {
     }
 }
 
-#Preview {
-    ControlPanelView()
-        .environment(AppState())
-        .frame(width: 320, height: 700)
-}

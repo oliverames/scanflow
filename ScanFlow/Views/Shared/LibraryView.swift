@@ -276,8 +276,3 @@ private struct GlassCardStyle: ViewModifier {
     }
 }
 
-#Preview {
-    LibraryView()
-        .environment(AppState())
-        .frame(width: 700, height: 500)
-}

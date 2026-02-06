@@ -3,251 +3,144 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 56;
+	objectVersion = 60;
 	objects = {
 
 /* Begin PBXBuildFile section */
-		/* App */
-		AA0001 /* ScanFlowApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0002; };
-
-		/* Models */
-		AA0101 /* ScanPreset.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0102; };
-		AA0103 /* ScannedFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0104; };
-		AA0105 /* QueuedScan.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0106; };
-		AA0107 /* ScanMetadata.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0108; };
-
-		/* ViewModels */
-		AA0201 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0202; };
-		AA0203 /* ScannerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0204; };
-		AA0205 /* SettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0206; };
-		AA0207 /* ImageProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0208; };
-		AA0209 /* PDFExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020A; };
-
-		/* Views - macOS */
-		AA0301 /* MainWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0302; };
-		AA0303 /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0304; };
-		AA0305 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0306; };
-		AA0307 /* ScannerSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0308; };
-
-		/* Views - Shared */
-		AA0401 /* ScanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0402; };
-		AA0403 /* QueueView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0404; };
-		AA0405 /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0406; };
-		AA0407 /* PresetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0408; };
-
-		/* Views - Components */
-		AA0501 /* ScannerStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0502; };
-		AA0503 /* PreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0504; };
-		AA0505 /* ControlPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0506; };
+		E8B0FD913AD448BB81294E16 /* ScanFlowApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A9E6299F45F4CAF84F7D9C6 /* ScanFlowApp.swift */; };
+		1AC0FEA751444B918CD513B1 /* MacOSPreviews.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED3126C360404D10B00F7B37 /* MacOSPreviews.swift */; };
+		29C06E71D85E4534B9E0BEBA /* SharedViewPreviews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C61E5C23C9B4ECEADA2D36F /* SharedViewPreviews.swift */; };
+		F1C3DD92A1C1499B8671D05F /* ComponentPreviews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A04D63E8A5814C55B0E39EF9 /* ComponentPreviews.swift */; };
+		C8E345654E3941CCA04F45D3 /* ScanFlow in Frameworks */ = {isa = PBXBuildFile; productRef = 098417651B7441D7AE903E69 /* ScanFlow */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		AA0000 /* ScanFlow.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ScanFlow.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		AA0002 /* ScanFlowApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanFlowApp.swift; sourceTree = "<group>"; };
-
-		AA0102 /* ScanPreset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanPreset.swift; sourceTree = "<group>"; };
-		AA0104 /* ScannedFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScannedFile.swift; sourceTree = "<group>"; };
-		AA0106 /* QueuedScan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueuedScan.swift; sourceTree = "<group>"; };
-		AA0108 /* ScanMetadata.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanMetadata.swift; sourceTree = "<group>"; };
-
-		AA0202 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
-		AA0204 /* ScannerManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScannerManager.swift; sourceTree = "<group>"; };
-		AA0206 /* SettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsStore.swift; sourceTree = "<group>"; };
-		AA0208 /* ImageProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageProcessor.swift; sourceTree = "<group>"; };
-		AA020A /* PDFExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFExporter.swift; sourceTree = "<group>"; };
-
-		AA0302 /* MainWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainWindow.swift; sourceTree = "<group>"; };
-		AA0304 /* SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarView.swift; sourceTree = "<group>"; };
-		AA0306 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		AA0308 /* ScannerSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScannerSelectionView.swift; sourceTree = "<group>"; };
-
-		AA0402 /* ScanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanView.swift; sourceTree = "<group>"; };
-		AA0404 /* QueueView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueueView.swift; sourceTree = "<group>"; };
-		AA0406 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
-		AA0408 /* PresetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PresetView.swift; sourceTree = "<group>"; };
-
-		AA0502 /* ScannerStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScannerStatusView.swift; sourceTree = "<group>"; };
-		AA0504 /* PreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewView.swift; sourceTree = "<group>"; };
-		AA0506 /* ControlPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControlPanelView.swift; sourceTree = "<group>"; };
-
-		AA0600 /* Info-macOS.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "Info-macOS.plist"; sourceTree = "<group>"; };
+		1A9E6299F45F4CAF84F7D9C6 /* ScanFlowApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanFlowApp.swift; sourceTree = "<group>"; };
+		ED3126C360404D10B00F7B37 /* MacOSPreviews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacOSPreviews.swift; sourceTree = "<group>"; };
+		4C61E5C23C9B4ECEADA2D36F /* SharedViewPreviews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedViewPreviews.swift; sourceTree = "<group>"; };
+		A04D63E8A5814C55B0E39EF9 /* ComponentPreviews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComponentPreviews.swift; sourceTree = "<group>"; };
+		645F399D2A6D4AB680A10057 /* Info-macOS.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "ScanFlow/Resources/Info-macOS.plist"; sourceTree = "<group>"; };
+		E4BCD4709E334F1DADF219A8 /* ScanFlow.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "ScanFlow/ScanFlow.entitlements"; sourceTree = "<group>"; };
+		76461F601301432A8AB826A8 /* ScanFlow.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ScanFlow.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		AA0010 /* Frameworks */ = {
+		0A54E09CBCF247DA99189586 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C8E345654E3941CCA04F45D3 /* ScanFlow in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		AA0020 = {
+		895804DF9C4142298316AE16 /* App */ = {
 			isa = PBXGroup;
 			children = (
-				AA0030 /* ScanFlow */,
-				AA0040 /* Products */,
+				1A9E6299F45F4CAF84F7D9C6 /* ScanFlowApp.swift */,
+				F60125A353FB438FA1C70350 /* Previews */,
 			);
+			path = App;
 			sourceTree = "<group>";
 		};
-		AA0030 /* ScanFlow */ = {
+		F60125A353FB438FA1C70350 /* Previews */ = {
 			isa = PBXGroup;
 			children = (
-				AA0002 /* ScanFlowApp.swift */,
-				AA0050 /* Models */,
-				AA0060 /* ViewModels */,
-				AA0070 /* Views */,
-				AA0080 /* Services */,
-				AA0090 /* Resources */,
+				ED3126C360404D10B00F7B37 /* MacOSPreviews.swift */,
+				4C61E5C23C9B4ECEADA2D36F /* SharedViewPreviews.swift */,
+				A04D63E8A5814C55B0E39EF9 /* ComponentPreviews.swift */,
 			);
-			path = ScanFlow;
+			path = Previews;
 			sourceTree = "<group>";
 		};
-		AA0040 /* Products */ = {
+		11E2A5756C584D2D89F322DC /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				AA0000 /* ScanFlow.app */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		FC3D0A5941A14F5C86BEDC02 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				76461F601301432A8AB826A8 /* ScanFlow.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
-		AA0050 /* Models */ = {
+		1013CB2CB9534794AF197918 = {
 			isa = PBXGroup;
 			children = (
-				AA0102 /* ScanPreset.swift */,
-				AA0104 /* ScannedFile.swift */,
-				AA0106 /* QueuedScan.swift */,
-				AA0108 /* ScanMetadata.swift */,
+				895804DF9C4142298316AE16 /* App */,
+				645F399D2A6D4AB680A10057 /* Info-macOS.plist */,
+				E4BCD4709E334F1DADF219A8 /* ScanFlow.entitlements */,
+				FC3D0A5941A14F5C86BEDC02 /* Products */,
+				11E2A5756C584D2D89F322DC /* Frameworks */,
 			);
-			path = Models;
-			sourceTree = "<group>";
-		};
-		AA0060 /* ViewModels */ = {
-			isa = PBXGroup;
-			children = (
-				AA0202 /* AppState.swift */,
-				AA0204 /* ScannerManager.swift */,
-				AA0206 /* SettingsStore.swift */,
-				AA0208 /* ImageProcessor.swift */,
-				AA020A /* PDFExporter.swift */,
-			);
-			path = ViewModels;
-			sourceTree = "<group>";
-		};
-		AA0070 /* Views */ = {
-			isa = PBXGroup;
-			children = (
-				AA0071 /* macOS */,
-				AA0072 /* Shared */,
-			);
-			path = Views;
-			sourceTree = "<group>";
-		};
-		AA0071 /* macOS */ = {
-			isa = PBXGroup;
-			children = (
-				AA0302 /* MainWindow.swift */,
-				AA0304 /* SidebarView.swift */,
-				AA0306 /* SettingsView.swift */,
-				AA0308 /* ScannerSelectionView.swift */,
-			);
-			path = macOS;
-			sourceTree = "<group>";
-		};
-		AA0072 /* Shared */ = {
-			isa = PBXGroup;
-			children = (
-				AA0402 /* ScanView.swift */,
-				AA0404 /* QueueView.swift */,
-				AA0406 /* LibraryView.swift */,
-				AA0408 /* PresetView.swift */,
-				AA0073 /* Components */,
-			);
-			path = Shared;
-			sourceTree = "<group>";
-		};
-		AA0073 /* Components */ = {
-			isa = PBXGroup;
-			children = (
-				AA0502 /* ScannerStatusView.swift */,
-				AA0504 /* PreviewView.swift */,
-				AA0506 /* ControlPanelView.swift */,
-			);
-			path = Components;
-			sourceTree = "<group>";
-		};
-		AA0080 /* Services */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = Services;
-			sourceTree = "<group>";
-		};
-		AA0090 /* Resources */ = {
-			isa = PBXGroup;
-			children = (
-				AA0600 /* Info-macOS.plist */,
-			);
-			path = Resources;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		AA0100 /* ScanFlow */ = {
+		7A1EC3B140864340A1F2BC9B /* ScanFlowApp */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = AA0110 /* Build configuration list for PBXNativeTarget "ScanFlow" */;
+			buildConfigurationList = 62DC527838624DABACCA22F9 /* Build configuration list for PBXNativeTarget "ScanFlowApp" */;
 			buildPhases = (
-				AA0120 /* Sources */,
-				AA0010 /* Frameworks */,
-				AA0130 /* Resources */,
+				6AD9A1D29EEB41CEB50F4C74 /* Sources */,
+				0A54E09CBCF247DA99189586 /* Frameworks */,
+				AC4BCD150950428AB4B55C4F /* Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
-			name = ScanFlow;
+			name = ScanFlowApp;
+			packageProductDependencies = (
+				098417651B7441D7AE903E69 /* ScanFlow */,
+			);
 			productName = ScanFlow;
-			productReference = AA0000 /* ScanFlow.app */;
+			productReference = 76461F601301432A8AB826A8 /* ScanFlow.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-		AA0150 /* Project object */ = {
+		F2AA2326A47F497999B0CAF0 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 1500;
-				LastUpgradeCheck = 1500;
+				LastUpgradeCheck = 1600;
 				TargetAttributes = {
-					AA0100 = {
-						CreatedOnToolsVersion = 15.0;
+					7A1EC3B140864340A1F2BC9B = {
+						CreatedOnToolsVersion = 16.0;
 					};
 				};
 			};
-			buildConfigurationList = AA0160 /* Build configuration list for PBXProject "ScanFlow" */;
-			compatibilityVersion = "Xcode 14.0";
+			buildConfigurationList = E8B7D04639E843F89361FC43 /* Build configuration list for PBXProject "ScanFlow" */;
+			compatibilityVersion = "Xcode 15.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
 				Base,
 			);
-			mainGroup = AA0020;
-			productRefGroup = AA0040 /* Products */;
+			mainGroup = 1013CB2CB9534794AF197918;
+			packageReferences = (
+				CA0F771E23594D7090B777E4 /* XCLocalSwiftPackageReference "ScanFlow" */,
+			);
+			productRefGroup = FC3D0A5941A14F5C86BEDC02 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				AA0100 /* ScanFlow */,
+				7A1EC3B140864340A1F2BC9B /* ScanFlowApp */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		AA0130 /* Resources */ = {
+		AC4BCD150950428AB4B55C4F /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -257,241 +150,123 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		AA0120 /* Sources */ = {
+		6AD9A1D29EEB41CEB50F4C74 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				AA0001 /* ScanFlowApp.swift in Sources */,
-				AA0101 /* ScanPreset.swift in Sources */,
-				AA0103 /* ScannedFile.swift in Sources */,
-				AA0105 /* QueuedScan.swift in Sources */,
-				AA0107 /* ScanMetadata.swift in Sources */,
-				AA0201 /* AppState.swift in Sources */,
-				AA0203 /* ScannerManager.swift in Sources */,
-				AA0205 /* SettingsStore.swift in Sources */,
-				AA0207 /* ImageProcessor.swift in Sources */,
-				AA0209 /* PDFExporter.swift in Sources */,
-				AA0301 /* MainWindow.swift in Sources */,
-				AA0303 /* SidebarView.swift in Sources */,
-				AA0305 /* SettingsView.swift in Sources */,
-				AA0307 /* ScannerSelectionView.swift in Sources */,
-				AA0401 /* ScanView.swift in Sources */,
-				AA0403 /* QueueView.swift in Sources */,
-				AA0405 /* LibraryView.swift in Sources */,
-				AA0407 /* PresetView.swift in Sources */,
-				AA0501 /* ScannerStatusView.swift in Sources */,
-				AA0503 /* PreviewView.swift in Sources */,
-				AA0505 /* ControlPanelView.swift in Sources */,
+				E8B0FD913AD448BB81294E16 /* ScanFlowApp.swift in Sources */,
+				1AC0FEA751444B918CD513B1 /* MacOSPreviews.swift in Sources */,
+				29C06E71D85E4534B9E0BEBA /* SharedViewPreviews.swift in Sources */,
+				F1C3DD92A1C1499B8671D05F /* ComponentPreviews.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
-		AA0200 /* Debug */ = {
+		28BE70E5A74144678A3848F9 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
-				CLANG_ANALYZER_NONNULL = YES;
-				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_ENABLE_OBJC_WEAK = YES;
-				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_COMMA = YES;
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_ENUM_CONVERSION = YES;
-				CLANG_WARN_INFINITE_RECURSION = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
-				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
-				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
-				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
-				CLANG_WARN_STRICT_PROTOTYPES = YES;
-				CLANG_WARN_SUSPICIOUS_MOVE = YES;
-				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				ALWAYS_USE_SEPARATE_HEADERMAPS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu17;
-				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"DEBUG=1",
-					"$(inherited)",
-				);
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
-				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
-				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
-				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SDKROOT = macosx;
 			};
 			name = Debug;
 		};
-		AA0210 /* Release */ = {
+		D6229F1CA67E447198FCAE50 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
-				CLANG_ANALYZER_NONNULL = YES;
-				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_ENABLE_OBJC_WEAK = YES;
-				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_COMMA = YES;
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_ENUM_CONVERSION = YES;
-				CLANG_WARN_INFINITE_RECURSION = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
-				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
-				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
-				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
-				CLANG_WARN_STRICT_PROTOTYPES = YES;
-				CLANG_WARN_SUSPICIOUS_MOVE = YES;
-				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				COPY_PHASE_STRIP = NO;
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				ENABLE_NS_ASSERTIONS = NO;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu17;
-				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
-				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MTL_ENABLE_DEBUG_INFO = NO;
-				MTL_FAST_MATH = YES;
-				SWIFT_COMPILATION_MODE = wholemodule;
+				ALWAYS_USE_SEPARATE_HEADERMAPS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				SDKROOT = macosx;
 			};
 			name = Release;
 		};
-		AA0220 /* Debug */ = {
+		B17915553F7C4A4A96C7A640 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_ENTITLEMENTS = ScanFlow/ScanFlow.entitlements;
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ALWAYS_USE_SEPARATE_HEADERMAPS = YES;
+				CODE_SIGN_ENTITLEMENTS = "ScanFlow/ScanFlow.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
-				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_DEBUG_DYLIB = YES;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = ScanFlow/Resources/Info-macOS.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = ScanFlow;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-				);
+				ENABLE_TESTABILITY = YES;
+				INFOPLIST_FILE = "ScanFlow/Resources/Info-macOS.plist";
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.scanflow.app;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
-				SUPPORTED_PLATFORMS = "macosx";
-				SUPPORTS_MACCATALYST = NO;
-				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
-				ARCHS = arm64;
+				PRODUCT_MODULE_NAME = ScanFlowApp;
+				PRODUCT_NAME = ScanFlow;
+				SWIFT_VERSION = 5.9;
 			};
 			name = Debug;
 		};
-		AA0230 /* Release */ = {
+		09801A4D53A8436684ABE46C /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_ENTITLEMENTS = ScanFlow/ScanFlow.entitlements;
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ALWAYS_USE_SEPARATE_HEADERMAPS = YES;
+				CODE_SIGN_ENTITLEMENTS = "ScanFlow/ScanFlow.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
-				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_DEBUG_DYLIB = YES;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = ScanFlow/Resources/Info-macOS.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = ScanFlow;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-				);
+				INFOPLIST_FILE = "ScanFlow/Resources/Info-macOS.plist";
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.scanflow.app;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
-				SUPPORTED_PLATFORMS = "macosx";
-				SUPPORTS_MACCATALYST = NO;
-				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
-				ARCHS = arm64;
+				PRODUCT_MODULE_NAME = ScanFlowApp;
+				PRODUCT_NAME = ScanFlow;
+				SWIFT_VERSION = 5.9;
 			};
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		AA0110 /* Build configuration list for PBXNativeTarget "ScanFlow" */ = {
+		E8B7D04639E843F89361FC43 /* Build configuration list for PBXProject "ScanFlow" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				AA0220 /* Debug */,
-				AA0230 /* Release */,
+				28BE70E5A74144678A3848F9 /* Debug */,
+				D6229F1CA67E447198FCAE50 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		AA0160 /* Build configuration list for PBXProject "ScanFlow" */ = {
+		62DC527838624DABACCA22F9 /* Build configuration list for PBXNativeTarget "ScanFlowApp" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				AA0200 /* Debug */,
-				AA0210 /* Release */,
+				B17915553F7C4A4A96C7A640 /* Debug */,
+				09801A4D53A8436684ABE46C /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		CA0F771E23594D7090B777E4 /* XCLocalSwiftPackageReference "ScanFlow" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ".";
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		098417651B7441D7AE903E69 /* ScanFlow */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CA0F771E23594D7090B777E4 /* XCLocalSwiftPackageReference "ScanFlow" */;
+			productName = ScanFlow;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
-	rootObject = AA0150 /* Project object */;
+	rootObject = F2AA2326A47F497999B0CAF0 /* Project object */;
 }

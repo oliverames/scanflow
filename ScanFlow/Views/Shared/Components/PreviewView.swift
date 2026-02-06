@@ -103,8 +103,3 @@ private struct GlassPanelStyle: ViewModifier {
     }
 }
 
-#Preview {
-    PreviewView()
-        .environment(AppState())
-        .frame(width: 500, height: 600)
-}

@@ -7,7 +7,7 @@
 
 import Foundation
 
-enum ScanFormat: String, Codable, CaseIterable {
+public enum ScanFormat: String, Codable, CaseIterable {
     case pdf = "PDF"
     case compressedPDF = "Compressed PDF"
     case jpeg = "JPEG"
@@ -15,18 +15,18 @@ enum ScanFormat: String, Codable, CaseIterable {
     case png = "PNG"
 }
 
-enum DocumentType: String, Codable, CaseIterable {
+public enum DocumentType: String, Codable, CaseIterable {
     case photo = "Photo"
     case document = "Document"
 }
 
-enum ColorMode: String, Codable, CaseIterable {
+public enum ColorMode: String, Codable, CaseIterable {
     case color = "Color"
     case grayscale = "Grayscale"
     case blackWhite = "B&W"
 }
 
-enum ScanPaperSize: String, Codable, CaseIterable {
+public enum ScanPaperSize: String, Codable, CaseIterable {
     case auto = "Auto"
     case letter = "US Letter"
     case legal = "US Legal"
@@ -35,26 +35,26 @@ enum ScanPaperSize: String, Codable, CaseIterable {
     case custom = "Custom"
 }
 
-enum ScanSource: String, Codable, CaseIterable {
+public enum ScanSource: String, Codable, CaseIterable {
     case flatbed = "Flatbed"
     case adfFront = "ADF Front"
     case adfDuplex = "ADF Duplex"
 }
 
-enum BlankPageHandling: String, Codable, CaseIterable {
+public enum BlankPageHandling: String, Codable, CaseIterable {
     case keep = "Keep"
     case delete = "Delete"
     case askUser = "Ask"
 }
 
-enum MediaDetection: String, Codable, CaseIterable {
+public enum MediaDetection: String, Codable, CaseIterable {
     case none = "None"
     case autoCrop = "Auto crop"
     case deskew = "De-skew"
     case autoCropAndDeskew = "Auto crop and de-skew"
 }
 
-enum RotationAngle: Int, Codable, CaseIterable {
+public enum RotationAngle: Int, Codable, CaseIterable {
     case none = 0
     case rotate90 = 90
     case rotate180 = 180
@@ -70,14 +70,14 @@ enum RotationAngle: Int, Codable, CaseIterable {
     }
 }
 
-enum ExistingFileBehavior: String, Codable, CaseIterable {
+public enum ExistingFileBehavior: String, Codable, CaseIterable {
     case increaseSequence = "Increase sequence number"
     case overwrite = "Overwrite"
     case askUser = "Ask"
 }
 
 // ImageCaptureCore specific options
-enum BitDepth: Int, Codable, CaseIterable {
+public enum BitDepth: Int, Codable, CaseIterable {
     case eight = 8
     case sixteen = 16
 
@@ -89,13 +89,13 @@ enum BitDepth: Int, Codable, CaseIterable {
     }
 }
 
-enum ScanDocumentType: String, Codable, CaseIterable {
+public enum ScanDocumentType: String, Codable, CaseIterable {
     case standard = "Standard"
     case positive = "Positive (slides)"
     case negative = "Negative (film)"
 }
 
-enum PageOrientation: Int, Codable, CaseIterable {
+public enum PageOrientation: Int, Codable, CaseIterable {
     case normal = 0
     case rotated90 = 90
     case rotated180 = 180
@@ -111,112 +111,112 @@ enum PageOrientation: Int, Codable, CaseIterable {
     }
 }
 
-enum MeasurementUnit: String, Codable, CaseIterable {
+public enum MeasurementUnit: String, Codable, CaseIterable {
     case inches = "Inches"
     case centimeters = "Centimeters"
     case pixels = "Pixels"
 }
 
-struct ScanPreset: Identifiable, Codable, Equatable {
-    let id: UUID
-    var name: String
+public struct ScanPreset: Identifiable, Codable, Equatable {
+    public let id: UUID
+    public var name: String
 
     // Basic settings
-    var resolution: Int // DPI
-    var format: ScanFormat
-    var quality: Double // 0-1 for JPEG compression
-    var searchablePDF: Bool
-    var colorMode: ColorMode
-    var paperSize: ScanPaperSize
-    var source: ScanSource
-    var destination: String
+    public var resolution: Int // DPI
+    public var format: ScanFormat
+    public var quality: Double // 0-1 for JPEG compression
+    public var searchablePDF: Bool
+    public var colorMode: ColorMode
+    public var paperSize: ScanPaperSize
+    public var source: ScanSource
+    public var destination: String
 
     // Filing options
-    var fileNamePrefix: String
-    var useSequenceNumber: Bool
-    var sequenceStartNumber: Int
-    var uniqueDateTag: Bool
-    var editEachFilename: Bool
-    var existingFileBehavior: ExistingFileBehavior
-    var splitOnPage: Bool
-    var splitPageNumber: Int
+    public var fileNamePrefix: String
+    public var useSequenceNumber: Bool
+    public var sequenceStartNumber: Int
+    public var uniqueDateTag: Bool
+    public var editEachFilename: Bool
+    public var existingFileBehavior: ExistingFileBehavior
+    public var splitOnPage: Bool
+    public var splitPageNumber: Int
 
     // Workflow options
-    var showConfigBeforeScan: Bool
-    var scanOnDocumentPlacement: Bool
-    var askForMorePages: Bool
-    var useTimer: Bool
-    var timerSeconds: Double
-    var showProgressIndicator: Bool
-    var openWithApp: Bool
-    var openWithAppPath: String
-    var printAfterScan: Bool
-    var keepPrintedFile: Bool
+    public var showConfigBeforeScan: Bool
+    public var scanOnDocumentPlacement: Bool
+    public var askForMorePages: Bool
+    public var useTimer: Bool
+    public var timerSeconds: Double
+    public var showProgressIndicator: Bool
+    public var openWithApp: Bool
+    public var openWithAppPath: String
+    public var printAfterScan: Bool
+    public var keepPrintedFile: Bool
 
     // Document type (for processing)
-    var documentType: DocumentType
+    public var documentType: DocumentType
 
     // Auto-enhancement options
-    var autoRotate: Bool
-    var deskew: Bool
-    var autoCrop: Bool
-    var restoreColor: Bool
-    var removeRedEye: Bool
+    public var autoRotate: Bool
+    public var deskew: Bool
+    public var autoCrop: Bool
+    public var restoreColor: Bool
+    public var removeRedEye: Bool
 
     // Blank page handling
-    var blankPageHandling: BlankPageHandling
-    var blankPageSensitivity: Double // 0-1
+    public var blankPageHandling: BlankPageHandling
+    public var blankPageSensitivity: Double // 0-1
 
     // Image adjustments
-    var brightness: Double // -1 to 1
-    var contrast: Double // -1 to 1
-    var gamma: Double // 0.5 to 3.0
-    var hue: Double // -1 to 1
-    var saturation: Double // -1 to 1
-    var lightness: Double // -1 to 1
+    public var brightness: Double // -1 to 1
+    public var contrast: Double // -1 to 1
+    public var gamma: Double // 0.5 to 3.0
+    public var hue: Double // -1 to 1
+    public var saturation: Double // -1 to 1
+    public var lightness: Double // -1 to 1
 
     // Media detection
-    var mediaDetection: MediaDetection
-    var rotationAngle: RotationAngle
+    public var mediaDetection: MediaDetection
+    public var rotationAngle: RotationAngle
 
     // ImageCaptureCore options
-    var bitDepth: BitDepth
-    var scanDocumentType: ScanDocumentType  // For film scanners
-    var useCustomScanArea: Bool
-    var scanAreaX: Double  // In current measurement unit
-    var scanAreaY: Double
-    var scanAreaWidth: Double
-    var scanAreaHeight: Double
-    var measurementUnit: MeasurementUnit
-    var bwThreshold: Int  // 0-255 for B&W scanning
-    var oddPageOrientation: PageOrientation
-    var evenPageOrientation: PageOrientation
-    var reverseFeederPageOrder: Bool
-    var overviewResolution: Int  // For preview scans
+    public var bitDepth: BitDepth
+    public var scanDocumentType: ScanDocumentType  // For film scanners
+    public var useCustomScanArea: Bool
+    public var scanAreaX: Double  // In current measurement unit
+    public var scanAreaY: Double
+    public var scanAreaWidth: Double
+    public var scanAreaHeight: Double
+    public var measurementUnit: MeasurementUnit
+    public var bwThreshold: Int  // 0-255 for B&W scanning
+    public var oddPageOrientation: PageOrientation
+    public var evenPageOrientation: PageOrientation
+    public var reverseFeederPageOrder: Bool
+    public var overviewResolution: Int  // For preview scans
 
     // Advanced options
-    var descreen: Bool // Remove moiré patterns
-    var sharpen: Bool
-    var invertColors: Bool
+    public var descreen: Bool // Remove moiré patterns
+    public var sharpen: Bool
+    public var invertColors: Bool
 
     // Multi-page options
-    var useDuplex: Bool
-    var rotateEvenPages: Bool // Rotate every second page by 180°
-    var splitBookPages: Bool
-    
+    public var useDuplex: Bool
+    public var rotateEvenPages: Bool // Rotate every second page by 180°
+    public var splitBookPages: Bool
+
     // Document separation settings (for batch ADF scanning)
-    var separationSettings: SeparationSettings
-    
+    public var separationSettings: SeparationSettings
+
     // AI-assisted file naming settings
-    var namingSettings: NamingSettings
+    public var namingSettings: NamingSettings
 
     // Legacy compatibility
-    var autoEnhance: Bool { colorMode == .color }
-    var useADF: Bool { source != .flatbed }
-    var detectBlankPages: Bool { blankPageHandling != .keep }
-    var splitOnBarcode: Bool { separationSettings.useBarcodes }  // Integrated with DocumentSeparator
+    public var autoEnhance: Bool { colorMode == .color }
+    public var useADF: Bool { source != .flatbed }
+    public var detectBlankPages: Bool { blankPageHandling != .keep }
+    public var splitOnBarcode: Bool { separationSettings.useBarcodes }  // Integrated with DocumentSeparator
 
-    init(
+    public init(
         id: UUID = UUID(),
         name: String,
         resolution: Int = 300,
@@ -364,7 +364,7 @@ struct ScanPreset: Identifiable, Codable, Equatable {
         self.namingSettings = namingSettings
     }
 
-    static let defaults: [ScanPreset] = [
+    public static let defaults: [ScanPreset] = [
         // ExactScan-style presets
         ScanPreset(
             name: "Color PDF",
@@ -437,7 +437,7 @@ struct ScanPreset: Identifiable, Codable, Equatable {
         )
     ]
 
-    static let quickScan = defaults[0]
-    static let searchablePDF = defaults.first { $0.searchablePDF } ?? defaults[0]
-    static let archiveQuality = defaults[7]
+    public static let quickScan = defaults[0]
+    public static let searchablePDF = defaults.first { $0.searchablePDF } ?? defaults[0]
+    public static let archiveQuality = defaults[7]
 }

@@ -569,9 +569,4 @@ private extension ScannerSelectionView {
     }
 }
 
-#Preview {
-    ScannerSelectionView(hasSelectedScanner: .constant(false))
-        .environment(AppState())
-        .frame(width: 600, height: 500)
-}
 #endif

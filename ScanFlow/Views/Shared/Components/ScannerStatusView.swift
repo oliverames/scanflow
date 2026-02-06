@@ -125,10 +125,3 @@ private struct GlassBadgeStyle: ViewModifier {
     }
 }
 
-#Preview {
-    HStack {
-        ScannerStatusView()
-            .environment(AppState())
-    }
-    .padding()
-}

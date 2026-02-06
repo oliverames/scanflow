@@ -158,9 +158,4 @@ struct RemoteScanPanel: View {
     }
 }
 
-#Preview {
-    RemoteScanPanel()
-        .environment(AppState())
-        .padding()
-}
 #endif

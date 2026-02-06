@@ -15,7 +15,7 @@ import AppKit
 /// Logging subsystem for ScanFlow scanner operations
 private let logger = Logger(subsystem: "com.scanflow.app", category: "ScannerManager")
 
-enum ConnectionState: Equatable {
+public enum ConnectionState: Equatable {
     case disconnected
     case discovering
     case connecting
@@ -23,7 +23,7 @@ enum ConnectionState: Equatable {
     case scanning
     case error(String)
 
-    var description: String {
+    public var description: String {
         switch self {
         case .disconnected: return "Disconnected"
         case .discovering: return "Discovering..."
@@ -34,14 +34,14 @@ enum ConnectionState: Equatable {
         }
     }
 
-    var isConnected: Bool {
+    public var isConnected: Bool {
         if case .connected = self { return true }
         if case .scanning = self { return true }
         return false
     }
 }
 
-struct ScanResult {
+public struct ScanResult {
     #if os(macOS)
     let images: [NSImage]  // Multiple pages for ADF scanning
     var image: NSImage { images.first ?? NSImage() }  // Backwards compatible
@@ -53,27 +53,27 @@ struct ScanResult {
 
 @Observable
 @MainActor
-class ScannerManager: NSObject {
+public class ScannerManager: NSObject {
     #if os(macOS)
-    var availableScanners: [ICScannerDevice] = []
-    var selectedScanner: ICScannerDevice?
+    public var availableScanners: [ICScannerDevice] = []
+    public var selectedScanner: ICScannerDevice?
     private var deviceBrowser: ICDeviceBrowser?
     #endif
 
-    var connectionState: ConnectionState = .disconnected
-    var lastError: String?
-    var isScanning: Bool = false
-    var availableSources: [ScanSource] = ScanSource.allCases // Default to all, updated when connected
+    public var connectionState: ConnectionState = .disconnected
+    public var lastError: String?
+    public var isScanning: Bool = false
+    public var availableSources: [ScanSource] = ScanSource.allCases // Default to all, updated when connected
     #if os(macOS)
     var onDeviceReady: ((ICDevice?) -> Void)?
     var onScannerDiscovered: ((ICScannerDevice) -> Void)?
     #endif
 
     // Mock data for initial testing
-    var mockScannerName: String = "Epson FastFoto FF-680W"
-    var useMockScanner: Bool = false
+    public var mockScannerName: String = "Epson FastFoto FF-680W"
+    public var useMockScanner: Bool = false
 
-    override init() {
+    public override init() {
         super.init()
         #if os(macOS)
         setupDeviceBrowser()
@@ -109,7 +109,7 @@ class ScannerManager: NSObject {
         logger.info("Device browser configured for local, shared, bonjour, and bluetooth scanners (mask: \(combinedMask))")
     }
 
-    func discoverScanners() async {
+    public func discoverScanners() async {
         logger.info("Starting scanner discovery")
 
         // Only change to discovering state if we're not already connected
@@ -150,7 +150,7 @@ class ScannerManager: NSObject {
     }
 
     /// Start continuous browsing - call once at app launch
-    func startBrowsing() {
+    public func startBrowsing() {
         logger.debug("startBrowsing called")
         if deviceBrowser == nil {
             setupDeviceBrowser()
@@ -168,7 +168,7 @@ class ScannerManager: NSObject {
         deviceBrowser?.stop()
     }
 
-    func connect(to scanner: ICScannerDevice) async throws {
+    public func connect(to scanner: ICScannerDevice) async throws {
         let scannerType = scanner.usbLocationID != 0 ? "USB" : "Network"
         logger.info("Connecting to scanner: \(scanner.name ?? "Unknown") (type: \(scannerType))")
         connectionState = .connecting
@@ -241,7 +241,7 @@ class ScannerManager: NSObject {
         throw lastError ?? ScannerError.connectionFailed
     }
 
-    func connectMockScanner() async {
+    public func connectMockScanner() async {
         logger.info("Connecting to mock scanner...")
         connectionState = .connecting
         try? await Task.sleep(for: .seconds(1))
@@ -251,7 +251,7 @@ class ScannerManager: NSObject {
     }
 
     /// The preferred source to default to when connecting (flatbed if available)
-    var preferredDefaultSource: ScanSource {
+    public var preferredDefaultSource: ScanSource {
         if availableSources.contains(.flatbed) {
             return .flatbed
         }
@@ -299,7 +299,7 @@ class ScannerManager: NSObject {
         logger.debug("Available sources: \(sources.map { $0.rawValue })")
     }
 
-    func disconnect() async {
+    public func disconnect() async {
         if let scanner = selectedScanner {
             try? await scanner.requestCloseSession()
         }
@@ -307,7 +307,7 @@ class ScannerManager: NSObject {
         connectionState = .disconnected
     }
 
-    func scan(with preset: ScanPreset) async throws -> ScanResult {
+    public func scan(with preset: ScanPreset) async throws -> ScanResult {
         logger.info("Starting scan with preset: \(preset.name)")
 
         guard connectionState.isConnected || useMockScanner else {
@@ -629,7 +629,7 @@ class ScannerManager: NSObject {
     private var scannedPages: [NSImage] = []
     private var isMultiPageScan: Bool = false
 
-    func requestOverviewScan() async throws -> NSImage {
+    public func requestOverviewScan() async throws -> NSImage {
         guard connectionState.isConnected || useMockScanner else {
             throw ScannerError.notConnected
         }
@@ -650,17 +650,17 @@ class ScannerManager: NSObject {
     }
     #else
     // iOS implementation stubs
-    func discoverScanners() async {
+    public func discoverScanners() async {
         connectionState = .error("Scanner discovery not supported on iOS")
     }
 
-    func connectMockScanner() async {
+    public func connectMockScanner() async {
         connectionState = .connecting
         try? await Task.sleep(for: .seconds(1))
         connectionState = .connected
     }
 
-    func disconnect() async {
+    public func disconnect() async {
         connectionState = .disconnected
     }
     #endif
@@ -669,7 +669,7 @@ class ScannerManager: NSObject {
 #if os(macOS)
 // MARK: - ICDeviceBrowserDelegate
 extension ScannerManager: ICDeviceBrowserDelegate {
-    nonisolated func deviceBrowser(_ browser: ICDeviceBrowser, didAdd device: ICDevice, moreComing: Bool) {
+    nonisolated public func deviceBrowser(_ browser: ICDeviceBrowser, didAdd device: ICDevice, moreComing: Bool) {
         let deviceType = device is ICScannerDevice ? "SCANNER" : "OTHER"
         let locationDesc = device.usbLocationID != 0 ? "USB" : "Network/Shared"
 
@@ -694,7 +694,7 @@ extension ScannerManager: ICDeviceBrowserDelegate {
         }
     }
 
-    nonisolated func deviceBrowser(_ browser: ICDeviceBrowser, didRemove device: ICDevice, moreGoing: Bool) {
+    nonisolated public func deviceBrowser(_ browser: ICDeviceBrowser, didRemove device: ICDevice, moreGoing: Bool) {
         logger.debug("Device removed: \(device.name ?? "Unknown")")
         if let scanner = device as? ICScannerDevice {
             Task { @MainActor in
@@ -704,7 +704,7 @@ extension ScannerManager: ICDeviceBrowserDelegate {
         }
     }
 
-    nonisolated func deviceBrowser(_ browser: ICDeviceBrowser, didEncounterError error: Error) {
+    nonisolated public func deviceBrowser(_ browser: ICDeviceBrowser, didEncounterError error: Error) {
         logger.error("Device browser error: \(error.localizedDescription)")
         Task { @MainActor in
             self.connectionState = .error(error.localizedDescription)
@@ -712,14 +712,14 @@ extension ScannerManager: ICDeviceBrowserDelegate {
         }
     }
 
-    nonisolated func deviceBrowserDidEnumerateLocalDevices(_ browser: ICDeviceBrowser) {
+    nonisolated public func deviceBrowserDidEnumerateLocalDevices(_ browser: ICDeviceBrowser) {
         logger.debug("Finished enumerating local devices")
     }
 }
 
 // MARK: - ICScannerDeviceDelegate
 extension ScannerManager: ICScannerDeviceDelegate {
-    nonisolated func didRemove(_ device: ICDevice) {
+    nonisolated public func didRemove(_ device: ICDevice) {
         if let scanner = device as? ICScannerDevice {
             Task { @MainActor in
                 if scanner == selectedScanner {
@@ -731,7 +731,7 @@ extension ScannerManager: ICScannerDeviceDelegate {
         }
     }
 
-    nonisolated func device(_ device: ICDevice, didOpenSessionWithError error: Error?) {
+    nonisolated public func device(_ device: ICDevice, didOpenSessionWithError error: Error?) {
         logger.debug("didOpenSessionWithError called, error: \(error?.localizedDescription ?? "none")")
         // Resume the connection continuation synchronously to avoid deadlocks
         DispatchQueue.main.async {
@@ -760,7 +760,7 @@ extension ScannerManager: ICScannerDeviceDelegate {
         }
     }
 
-    nonisolated func device(_ device: ICDevice, didCloseSessionWithError error: Error?) {
+    nonisolated public func device(_ device: ICDevice, didCloseSessionWithError error: Error?) {
         logger.debug("Session closed, error: \(error?.localizedDescription ?? "none")")
         Task { @MainActor in
             connectionState = .disconnected
@@ -768,7 +768,7 @@ extension ScannerManager: ICScannerDeviceDelegate {
         }
     }
 
-    nonisolated func scannerDevice(_ scanner: ICScannerDevice, didSelect functionalUnit: ICScannerFunctionalUnit, error: Error?) {
+    nonisolated public func scannerDevice(_ scanner: ICScannerDevice, didSelect functionalUnit: ICScannerFunctionalUnit, error: Error?) {
         logger.debug("didSelect functionalUnit: \(functionalUnit.type.rawValue), error: \(error?.localizedDescription ?? "none")")
         if let error = error {
             Task { @MainActor in
@@ -777,7 +777,7 @@ extension ScannerManager: ICScannerDeviceDelegate {
         }
     }
 
-    nonisolated func scannerDevice(_ scanner: ICScannerDevice, didScanTo url: URL) {
+    nonisolated public func scannerDevice(_ scanner: ICScannerDevice, didScanTo url: URL) {
         logger.debug("didScanTo URL: \(url.path)")
         
         // Capture scanner properties before the async closure to avoid Sendable warnings
@@ -834,7 +834,7 @@ extension ScannerManager: ICScannerDeviceDelegate {
         }
     }
 
-    nonisolated func scannerDevice(_ scanner: ICScannerDevice, didCompleteOverviewScanWithError error: Error?) {
+    nonisolated public func scannerDevice(_ scanner: ICScannerDevice, didCompleteOverviewScanWithError error: Error?) {
         logger.debug("didCompleteOverviewScanWithError: \(error?.localizedDescription ?? "none")")
         if let error = error {
             Task { @MainActor in
@@ -843,7 +843,7 @@ extension ScannerManager: ICScannerDeviceDelegate {
         }
     }
 
-    nonisolated func scannerDevice(_ scanner: ICScannerDevice, didCompleteScanWithError error: Error?) {
+    nonisolated public func scannerDevice(_ scanner: ICScannerDevice, didCompleteScanWithError error: Error?) {
         if let error = error {
             let nsError = error as NSError
             logger.error("Scan completed with error: \(error.localizedDescription) (domain: \(nsError.domain), code: \(nsError.code))")
@@ -902,17 +902,17 @@ extension ScannerManager: ICScannerDeviceDelegate {
     }
 
     // Progress tracking
-    nonisolated func scannerDevice(_ scanner: ICScannerDevice, didScanTo data: ICScannerBandData) {
+    nonisolated public func scannerDevice(_ scanner: ICScannerDevice, didScanTo data: ICScannerBandData) {
         logger.debug("Scan data band: \(data.dataSize) bytes, fullImageWidth: \(data.fullImageWidth), fullImageHeight: \(data.fullImageHeight)")
     }
 
     // Status information delegate
-    nonisolated func device(_ device: ICDevice, didReceiveStatusInformation status: [ICDeviceStatus : Any]) {
+    nonisolated public func device(_ device: ICDevice, didReceiveStatusInformation status: [ICDeviceStatus : Any]) {
         logger.debug("Status update received with \(status.count) entries")
     }
 
     // Error delegate
-    nonisolated func device(_ device: ICDevice, didEncounterError error: Error?) {
+    nonisolated public func device(_ device: ICDevice, didEncounterError error: Error?) {
         logger.error("Device error: \(error?.localizedDescription ?? "unknown")")
         Task { @MainActor in
             if let error = error {
@@ -927,7 +927,7 @@ extension ScannerManager: ICScannerDeviceDelegate {
     }
 
     // Ready for scan
-    nonisolated func deviceDidBecomeReady(_ device: ICDevice) {
+    nonisolated public func deviceDidBecomeReady(_ device: ICDevice) {
         logger.info("Device became ready: \(device.name ?? "Unknown")")
         Task { @MainActor in
             self.onDeviceReady?(device)
@@ -946,7 +946,7 @@ extension ICScannerDevice {
 }
 #endif
 
-enum ScannerError: LocalizedError {
+public enum ScannerError: LocalizedError {
     case notConnected
     case connectionFailed
     case scanFailed
@@ -955,7 +955,7 @@ enum ScannerError: LocalizedError {
     case scanTimeout
     case scanCancelled
 
-    var errorDescription: String? {
+    public var errorDescription: String? {
         switch self {
         case .notConnected: return "Scanner is not connected"
         case .connectionFailed: return "Failed to connect to scanner"

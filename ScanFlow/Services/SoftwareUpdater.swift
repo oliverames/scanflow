@@ -22,15 +22,15 @@ final class CheckForUpdatesViewModel: ObservableObject {
 
 /// Manages software updates using Sparkle framework
 @MainActor
-final class SoftwareUpdater: ObservableObject {
+public final class SoftwareUpdater: ObservableObject {
     /// Shared instance for app-wide access
-    static let shared = SoftwareUpdater()
+    public static let shared = SoftwareUpdater()
 
     /// The Sparkle updater controller
-    let updaterController: SPUStandardUpdaterController
+    public let updaterController: SPUStandardUpdaterController
 
     /// The underlying updater instance
-    var updater: SPUUpdater {
+    public var updater: SPUUpdater {
         updaterController.updater
     }
 
@@ -74,7 +74,7 @@ final class SoftwareUpdater: ObservableObject {
     }
 
     /// Check for updates manually
-    func checkForUpdates() {
+    public func checkForUpdates() {
         updater.checkForUpdates()
     }
 

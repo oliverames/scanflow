@@ -14,13 +14,13 @@ import PDFKit
 
 #if os(macOS)
 @MainActor
-final class RemoteScanServer {
-    enum ServerError: LocalizedError {
+public final class RemoteScanServer {
+    public enum ServerError: LocalizedError {
         case alreadyRunning
         case serverUnavailable
         case busy
 
-        var errorDescription: String? {
+        public var errorDescription: String? {
             switch self {
             case .alreadyRunning:
                 return "Remote scan server is already running"
@@ -40,7 +40,7 @@ final class RemoteScanServer {
     private(set) var isRunning: Bool = false
     private(set) var lastError: String?
 
-    init(scanHandler: @escaping (RemoteScanRequest) async throws -> RemoteScanResult) {
+    public init(scanHandler: @escaping (RemoteScanRequest) async throws -> RemoteScanResult) {
         self.scanHandler = scanHandler
     }
 

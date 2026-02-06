@@ -193,11 +193,6 @@ struct PresetDetailView: View {
     }
 }
 
-#Preview {
-    PresetView()
-        .environment(AppState())
-        .frame(width: 800, height: 600)
-}
 
 private struct GlassHeaderStyle: ViewModifier {
     let cornerRadius: CGFloat

@@ -137,8 +137,3 @@ private struct GlassHeaderStyle: ViewModifier {
     }
 }
 
-#Preview {
-    QueueView()
-        .environment(AppState())
-        .frame(width: 700, height: 500)
-}

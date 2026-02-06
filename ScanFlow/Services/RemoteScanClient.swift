@@ -10,7 +10,7 @@ import Network
 
 @MainActor
 @Observable
-final class RemoteScanClient {
+public final class RemoteScanClient {
     enum ConnectionState: String {
         case disconnected
         case connecting
@@ -23,6 +23,8 @@ final class RemoteScanClient {
         let name: String
         let endpoint: NWEndpoint
     }
+
+    public init() {}
 
     private let queue = DispatchQueue(label: "com.scanflow.remotescan.client")
     private var browser: NWBrowser?

@@ -12,18 +12,18 @@ import AppKit
 import UIKit
 #endif
 
-struct ScannedFile: Identifiable, Codable {
-    let id: UUID
-    var filename: String
-    var fileURL: URL
-    var size: Int64 // bytes
-    var resolution: Int
-    var dateScanned: Date
-    var scannerModel: String
-    var format: ScanFormat
-    var thumbnailPath: String?
+public struct ScannedFile: Identifiable, Codable {
+    public let id: UUID
+    public var filename: String
+    public var fileURL: URL
+    public var size: Int64 // bytes
+    public var resolution: Int
+    public var dateScanned: Date
+    public var scannerModel: String
+    public var format: ScanFormat
+    public var thumbnailPath: String?
 
-    init(
+    public init(
         id: UUID = UUID(),
         filename: String,
         fileURL: URL,
@@ -45,11 +45,11 @@ struct ScannedFile: Identifiable, Codable {
         self.thumbnailPath = thumbnailPath
     }
 
-    var formattedSize: String {
+    public var formattedSize: String {
         ByteCountFormatter.string(fromByteCount: size, countStyle: .file)
     }
 
-    var formattedDate: String {
+    public var formattedDate: String {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
         formatter.timeStyle = .short

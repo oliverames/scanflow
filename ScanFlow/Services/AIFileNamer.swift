@@ -15,36 +15,36 @@ import FoundationModels
 #endif
 
 /// Settings for AI-assisted file naming
-struct NamingSettings: Codable, Equatable {
-    var enabled: Bool = false
-    
+public struct NamingSettings: Codable, Equatable {
+    public var enabled: Bool = false
+
     // Standard Mode Options
-    var useDatePrefix: Bool = true
-    var dateSource: DateSource = .documentContent
-    var includeDocumentType: Bool = true
-    var includeKeyEntities: Bool = true
-    var maxLength: Int = 60
-    
+    public var useDatePrefix: Bool = true
+    public var dateSource: DateSource = .documentContent
+    public var includeDocumentType: Bool = true
+    public var includeKeyEntities: Bool = true
+    public var maxLength: Int = 60
+
     // Advanced Mode
-    var useAdvancedMode: Bool = false
-    var customPrompt: String = Self.defaultPrompt
-    
+    public var useAdvancedMode: Bool = false
+    public var customPrompt: String = Self.defaultPrompt
+
     // Fallback Behavior (user preference)
-    var fallbackBehavior: FallbackBehavior = .promptManual
-    
-    enum DateSource: String, Codable, CaseIterable {
+    public var fallbackBehavior: FallbackBehavior = .promptManual
+
+    public enum DateSource: String, Codable, CaseIterable {
         case documentContent = "From Document"
         case scanDate = "Scan Date"
         case none = "No Date"
     }
     
-    enum FallbackBehavior: String, Codable, CaseIterable {
+    public enum FallbackBehavior: String, Codable, CaseIterable {
         case promptManual = "Prompt for manual entry"
         case notifyAndFallback = "Notify and use date-based"
         case silentFallback = "Silent fallback to date-based"
     }
     
-    static let defaultPrompt = """
+    public static let defaultPrompt = """
         Generate a filename for this scanned document following these rules:
 
         NAMING CONVENTIONS:
@@ -78,7 +78,9 @@ struct NamingSettings: Codable, Equatable {
         - "media release copy"
         """
     
-    static let `default` = NamingSettings()
+    public static let `default` = NamingSettings()
+
+    public init() {}
 }
 
 /// Response structure for AI-generated filename

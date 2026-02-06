@@ -37,9 +37,4 @@ struct SidebarView: View {
     }
 }
 
-#Preview {
-    SidebarView()
-        .environment(AppState())
-        .frame(width: 200, height: 600)
-}
 #endif

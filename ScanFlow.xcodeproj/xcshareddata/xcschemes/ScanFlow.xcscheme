@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Scheme
-   LastUpgradeVersion = "1500"
+   LastUpgradeVersion = "1600"
    version = "1.7">
    <BuildAction
       parallelizeBuildables = "YES"
@@ -14,9 +14,9 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "AA0100"
+               BlueprintIdentifier = "7A1EC3B140864340A1F2BC9B"
                BuildableName = "ScanFlow.app"
-               BlueprintName = "ScanFlow"
+               BlueprintName = "ScanFlowApp"
                ReferencedContainer = "container:ScanFlow.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -38,15 +38,14 @@
       useCustomWorkingDirectory = "NO"
       ignoresPersistentStateOnLaunch = "NO"
       debugDocumentVersioning = "YES"
-      debugServiceExtension = "internal"
       allowLocationSimulation = "YES">
       <BuildableProductRunnable
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "AA0100"
+            BlueprintIdentifier = "7A1EC3B140864340A1F2BC9B"
             BuildableName = "ScanFlow.app"
-            BlueprintName = "ScanFlow"
+            BlueprintName = "ScanFlowApp"
             ReferencedContainer = "container:ScanFlow.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
@@ -61,9 +60,9 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "AA0100"
+            BlueprintIdentifier = "7A1EC3B140864340A1F2BC9B"
             BuildableName = "ScanFlow.app"
-            BlueprintName = "ScanFlow"
+            BlueprintName = "ScanFlowApp"
             ReferencedContainer = "container:ScanFlow.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>

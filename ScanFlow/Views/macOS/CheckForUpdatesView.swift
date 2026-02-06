@@ -10,16 +10,16 @@ import SwiftUI
 import Sparkle
 
 /// SwiftUI view for the "Check for Updates" menu item
-struct CheckForUpdatesView: View {
+public struct CheckForUpdatesView: View {
     @ObservedObject private var checkForUpdatesViewModel: CheckForUpdatesViewModel
     private let updater: SPUUpdater
 
-    init(updater: SPUUpdater) {
+    public init(updater: SPUUpdater) {
         self.updater = updater
         self.checkForUpdatesViewModel = CheckForUpdatesViewModel(updater: updater)
     }
 
-    var body: some View {
+    public var body: some View {
         Button("Check for Updates…") {
             updater.checkForUpdates()
         }

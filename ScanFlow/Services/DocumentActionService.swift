@@ -14,14 +14,14 @@ import Contacts
 #endif
 
 @MainActor
-final class DocumentActionService {
+public final class DocumentActionService {
     #if os(macOS)
     private let imageProcessor: ImageProcessor
     private let analyzer = DocumentActionAnalyzer()
     private let eventStore = EKEventStore()
     private let contactStore = CNContactStore()
 
-    init(imageProcessor: ImageProcessor) {
+    public init(imageProcessor: ImageProcessor) {
         self.imageProcessor = imageProcessor
     }
 

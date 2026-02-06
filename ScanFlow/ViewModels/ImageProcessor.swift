@@ -18,11 +18,11 @@ import Vision
 
 /// Comprehensive image processing for scanned documents and photos
 @MainActor
-class ImageProcessor {
+public class ImageProcessor {
 
     private let context: CIContext
 
-    init() {
+    public init() {
         // Create high-quality processing context
         let options: [CIContextOption: Any] = [
             .useSoftwareRenderer: false,

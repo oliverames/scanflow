@@ -12,13 +12,13 @@ import os.log
 private let logger = Logger(subsystem: "com.scanflow.app", category: "AppLifecycleDelegate")
 
 @MainActor
-final class AppLifecycleDelegate: NSObject, NSApplicationDelegate {
-    var appStateProvider: (() -> AppState)?
+public final class AppLifecycleDelegate: NSObject, NSApplicationDelegate {
+    public var appStateProvider: (() -> AppState)?
     private var statusBarController: StatusBarController?
     private var keepConnectedObserver: NSObjectProtocol?
     private var menuBarSettingObserver: NSObjectProtocol?
 
-    func applicationDidFinishLaunching(_ notification: Notification) {
+    public func applicationDidFinishLaunching(_ notification: Notification) {
         statusBarController = StatusBarController(appStateProvider: { [weak self] in
             self?.appStateProvider?()
         })
@@ -55,7 +55,7 @@ final class AppLifecycleDelegate: NSObject, NSApplicationDelegate {
         logger.debug("Menu bar visibility updated: \(shouldShowMenuBar)")
     }
 
-    func applicationWillTerminate(_ notification: Notification) {
+    public func applicationWillTerminate(_ notification: Notification) {
         if let observer = keepConnectedObserver {
             NotificationCenter.default.removeObserver(observer)
         }
@@ -64,7 +64,7 @@ final class AppLifecycleDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+    public func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         guard let appState = appStateProvider?() else { return .terminateNow }
 
         // If keepConnectedInBackground is already enabled, go to background mode
@@ -129,8 +129,8 @@ final class AppLifecycleDelegate: NSObject, NSApplicationDelegate {
 }
 
 extension Notification.Name {
-    static let scanflowKeepConnectedChanged = Notification.Name("scanflow.keepConnectedChanged")
-    static let scanflowMenuBarSettingChanged = Notification.Name("scanflow.menuBarSettingChanged")
+    public static let scanflowKeepConnectedChanged = Notification.Name("scanflow.keepConnectedChanged")
+    public static let scanflowMenuBarSettingChanged = Notification.Name("scanflow.menuBarSettingChanged")
 }
 
 @MainActor

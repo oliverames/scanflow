@@ -17,15 +17,15 @@ import ImageCaptureCore
 
 private let logger = Logger(subsystem: "com.scanflow.app", category: "AppState")
 
-enum NavigationSection: String, CaseIterable, Identifiable {
+public enum NavigationSection: String, CaseIterable, Identifiable {
     case scan = "Scan"
     case queue = "Scan Queue"
     case library = "Scanned Files"
     case presets = "Scan Presets"
 
-    var id: String { rawValue }
+    public var id: String { rawValue }
 
-    var iconName: String {
+    public var iconName: String {
         switch self {
         case .scan: return "scanner"
         case .queue: return "list.bullet"
@@ -37,60 +37,60 @@ enum NavigationSection: String, CaseIterable, Identifiable {
 
 @MainActor
 @Observable
-class AppState {
-    var scannerManager = ScannerManager()
+public class AppState {
+    public var scannerManager = ScannerManager()
     #if os(macOS)
-    var imageProcessor: ImageProcessor
-    var documentActionService: DocumentActionService
-    @ObservationIgnored lazy var remoteScanServer: RemoteScanServer = RemoteScanServer(scanHandler: { [weak self] request in
+    public var imageProcessor: ImageProcessor
+    public var documentActionService: DocumentActionService
+    @ObservationIgnored public lazy var remoteScanServer: RemoteScanServer = RemoteScanServer(scanHandler: { [weak self] request in
         guard let self else {
             throw RemoteScanServer.ServerError.serverUnavailable
         }
         return try await self.performRemoteScan(request)
     })
     #else
-    var remoteScanClient: RemoteScanClient
+    public var remoteScanClient: RemoteScanClient
     #endif
-    var scanQueue: [QueuedScan] = []
-    var scannedFiles: [ScannedFile] = []
-    var presets: [ScanPreset] = ScanPreset.defaults
-    var currentPreset: ScanPreset = ScanPreset.quickScan
-    var selectedSection: NavigationSection = .scan
-    var isScanning: Bool = false
-    var showingAlert: Bool = false
-    var alertMessage: String = ""
-    var showScanSettings: Bool = true
-    var showScannerSelection: Bool = false
-    var isBackgroundModeEnabled: Bool = false
+    public var scanQueue: [QueuedScan] = []
+    public var scannedFiles: [ScannedFile] = []
+    public var presets: [ScanPreset] = ScanPreset.defaults
+    public var currentPreset: ScanPreset = ScanPreset.quickScan
+    public var selectedSection: NavigationSection = .scan
+    public var isScanning: Bool = false
+    public var showingAlert: Bool = false
+    public var alertMessage: String = ""
+    public var showScanSettings: Bool = true
+    public var showScannerSelection: Bool = false
+    public var isBackgroundModeEnabled: Bool = false
 
     // Settings - use separate ObservableObject to avoid @Observable/@AppStorage conflict
     @ObservationIgnored private var _settings = SettingsStore()
     
-    var defaultResolution: Int {
+    public var defaultResolution: Int {
         get { _settings.defaultResolution }
         set { _settings.defaultResolution = newValue }
     }
-    var defaultFormat: String {
+    public var defaultFormat: String {
         get { _settings.defaultFormat }
         set { _settings.defaultFormat = newValue }
     }
-    var scanDestination: String {
+    public var scanDestination: String {
         get { _settings.scanDestination }
         set { _settings.scanDestination = newValue }
     }
-    var autoOpenDestination: Bool {
+    public var autoOpenDestination: Bool {
         get { _settings.autoOpenDestination }
         set { _settings.autoOpenDestination = newValue }
     }
-    var organizationPattern: String {
+    public var organizationPattern: String {
         get { _settings.organizationPattern }
         set { _settings.organizationPattern = newValue }
     }
-    var fileNamingTemplate: String {
+    public var fileNamingTemplate: String {
         get { _settings.fileNamingTemplate }
         set { _settings.fileNamingTemplate = newValue }
     }
-    var useMockScanner: Bool {
+    public var useMockScanner: Bool {
         get { _settings.useMockScanner }
         set {
             _settings.useMockScanner = newValue
@@ -98,62 +98,62 @@ class AppState {
         }
     }
 
-    var keepConnectedInBackground: Bool {
+    public var keepConnectedInBackground: Bool {
         get { _settings.keepConnectedInBackground }
         set { _settings.keepConnectedInBackground = newValue }
     }
 
-    var shouldPromptForBackgroundConnection: Bool {
+    public var shouldPromptForBackgroundConnection: Bool {
         get { _settings.shouldPromptForBackgroundConnection }
         set { _settings.shouldPromptForBackgroundConnection = newValue }
     }
 
-    var hasConnectedScanner: Bool {
+    public var hasConnectedScanner: Bool {
         get { _settings.hasConnectedScanner }
         set { _settings.hasConnectedScanner = newValue }
     }
 
-    var autoStartScanWhenReady: Bool {
+    public var autoStartScanWhenReady: Bool {
         get { _settings.autoStartScanWhenReady }
         set { _settings.autoStartScanWhenReady = newValue }
     }
 
-    var startAtLogin: Bool {
+    public var startAtLogin: Bool {
         get { _settings.startAtLogin }
         set { _settings.startAtLogin = newValue }
     }
 
-    var remoteScanServerEnabled: Bool {
+    public var remoteScanServerEnabled: Bool {
         get { _settings.remoteScanServerEnabled }
         set { _settings.remoteScanServerEnabled = newValue }
     }
 
-    var autoStartScannerIDs: Set<String> {
+    public var autoStartScannerIDs: Set<String> {
         get { _settings.autoStartScannerIDs }
         set { _settings.autoStartScannerIDs = newValue }
     }
 
-    var menuBarAlwaysEnabled: Bool {
+    public var menuBarAlwaysEnabled: Bool {
         get { _settings.menuBarAlwaysEnabled }
         set { _settings.menuBarAlwaysEnabled = newValue }
     }
 
     /// Tracks whether a scan was performed during this app session (not persisted)
-    var didScanThisSession: Bool = false
+    public var didScanThisSession: Bool = false
 
     // AI-assisted file naming settings (defaults for new presets)
-    var defaultNamingSettings: NamingSettings {
+    public var defaultNamingSettings: NamingSettings {
         get { _settings.defaultNamingSettings }
         set { _settings.defaultNamingSettings = newValue }
     }
 
     // Document separation settings (defaults for new presets)
-    var defaultSeparationSettings: SeparationSettings {
+    public var defaultSeparationSettings: SeparationSettings {
         get { _settings.defaultSeparationSettings }
         set { _settings.defaultSeparationSettings = newValue }
     }
 
-    init() {
+    public init() {
         logger.info("AppState initializing...")
         #if os(macOS)
         let processor = ImageProcessor()
@@ -190,7 +190,7 @@ class AppState {
         logger.info("AppState initialized with \(self.presets.count) presets")
     }
 
-    func loadPresets() {
+    public func loadPresets() {
         logger.info("Loading presets from UserDefaults")
         guard let data = UserDefaults.standard.data(forKey: "customPresets") else {
             logger.info("No custom presets found, using defaults")
@@ -207,7 +207,7 @@ class AppState {
         }
     }
 
-    func savePresets() {
+    public func savePresets() {
         let customPresets = presets.filter { preset in
             !ScanPreset.defaults.contains { $0.id == preset.id }
         }
@@ -220,7 +220,7 @@ class AppState {
         }
     }
 
-    func addToQueue(preset: ScanPreset, count: Int = 1) {
+    public func addToQueue(preset: ScanPreset, count: Int = 1) {
         logger.info("Adding \(count) scan(s) to queue with preset: \(preset.name)")
         for i in 0..<count {
             let scan = QueuedScan(
@@ -232,12 +232,12 @@ class AppState {
         logger.info("Queue now contains \(self.scanQueue.count) items")
     }
 
-    func removeFromQueue(scan: QueuedScan) {
+    public func removeFromQueue(scan: QueuedScan) {
         logger.info("Removing scan from queue: \(scan.name)")
         scanQueue.removeAll { $0.id == scan.id }
     }
 
-    func startScanning() async {
+    public func startScanning() async {
         guard !scanQueue.isEmpty else {
             logger.warning("startScanning called but queue is empty")
             return
@@ -641,7 +641,7 @@ class AppState {
         return nil
     }
 
-    func sanitizeFilenameInput(_ filename: String) -> String {
+    public func sanitizeFilenameInput(_ filename: String) -> String {
         let invalidCharacters = CharacterSet(charactersIn: ":/\\?*\"<>|")
         let sanitized = filename.components(separatedBy: invalidCharacters).joined(separator: "")
         return sanitized.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -760,16 +760,16 @@ class AppState {
     }
     #endif
 
-    func showAlert(message: String) {
+    public func showAlert(message: String) {
         alertMessage = message
         showingAlert = true
     }
 
-    func markScannerUsed() {
+    public func markScannerUsed() {
         hasConnectedScanner = true
     }
 
-    func enterBackgroundMode() {
+    public func enterBackgroundMode() {
         #if os(macOS)
         isBackgroundModeEnabled = true
         if keepConnectedInBackground {
@@ -780,7 +780,7 @@ class AppState {
         #endif
     }
 
-    func exitBackgroundMode() {
+    public func exitBackgroundMode() {
         #if os(macOS)
         isBackgroundModeEnabled = false
         NSApp.setActivationPolicy(.regular)
@@ -789,7 +789,7 @@ class AppState {
     }
 
     #if os(macOS)
-    func updateLoginItemRegistration(enabled: Bool) {
+    public func updateLoginItemRegistration(enabled: Bool) {
         guard #available(macOS 13.0, *) else { return }
         do {
             let service = SMAppService.mainApp
@@ -803,7 +803,7 @@ class AppState {
         }
     }
 
-    func handleKeepConnectedToggle(_ enabled: Bool) {
+    public func handleKeepConnectedToggle(_ enabled: Bool) {
         if enabled && !startAtLogin {
             startAtLogin = true
         }
@@ -818,12 +818,12 @@ class AppState {
         )
     }
 
-    func handleStartAtLoginToggle(_ enabled: Bool) {
+    public func handleStartAtLoginToggle(_ enabled: Bool) {
         startAtLogin = enabled
         updateLoginItemRegistration(enabled: enabled)
     }
 
-    func handleRemoteScanServerToggle(_ enabled: Bool) {
+    public func handleRemoteScanServerToggle(_ enabled: Bool) {
         remoteScanServerEnabled = enabled
         if enabled {
             remoteScanServer.start()
@@ -832,11 +832,11 @@ class AppState {
         }
     }
 
-    func isAutoStartEnabled(for scanner: ICScannerDevice) -> Bool {
+    public func isAutoStartEnabled(for scanner: ICScannerDevice) -> Bool {
         autoStartScannerIDs.contains(scanner.scanflowIdentifier)
     }
 
-    func setAutoStartEnabled(_ enabled: Bool, for scanner: ICScannerDevice) {
+    public func setAutoStartEnabled(_ enabled: Bool, for scanner: ICScannerDevice) {
         var updated = autoStartScannerIDs
         let identifier = scanner.scanflowIdentifier
         if enabled {

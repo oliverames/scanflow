@@ -8,10 +8,12 @@
 #if os(macOS)
 import SwiftUI
 
-struct SettingsView: View {
+public struct SettingsView: View {
     @Environment(AppState.self) private var appState
 
-    var body: some View {
+    public init() {}
+
+    public var body: some View {
         TabView {
             GeneralSettings()
                 .tabItem {
@@ -227,8 +229,4 @@ struct AdvancedSettings: View {
     }
 }
 
-#Preview {
-    SettingsView()
-        .environment(AppState())
-}
 #endif

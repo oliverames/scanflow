@@ -10,7 +10,7 @@ let package = Package(
         .iOS(.v17)  // iOS 17+
     ],
     products: [
-        .executable(
+        .library(
             name: "ScanFlow",
             targets: ["ScanFlow"]
         )
@@ -19,13 +19,13 @@ let package = Package(
         .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.6.0")
     ],
     targets: [
-        .executableTarget(
+        .target(
             name: "ScanFlow",
             dependencies: [
                 .product(name: "Sparkle", package: "Sparkle", condition: .when(platforms: [.macOS]))
             ],
             path: "ScanFlow",
-            exclude: [],
+            exclude: ["ScanFlowApp.swift"],
             resources: [
                 .process("Resources/Info-macOS.plist"),
                 .process("ScanFlow.entitlements")

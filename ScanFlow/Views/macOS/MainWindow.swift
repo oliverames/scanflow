@@ -11,10 +11,12 @@ import os.log
 
 private let logger = Logger(subsystem: "com.scanflow.app", category: "MainWindow")
 
-struct MainWindow: View {
+public struct MainWindow: View {
     @Environment(AppState.self) private var appState
 
-    var body: some View {
+    public init() {}
+
+    public var body: some View {
         @Bindable var appState = appState
 
         mainContentView
@@ -185,9 +187,4 @@ private struct GlassToolbarPill: ViewModifier {
     }
 }
 
-#Preview {
-    MainWindow()
-        .environment(AppState())
-        .frame(width: 1000, height: 700)
-}
 #endif

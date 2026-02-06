@@ -154,13 +154,3 @@ struct DocumentSeparationSettingsView: View {
         }
     }
 }
-
-// MARK: - Preview
-
-#Preview {
-    Form {
-        DocumentSeparationSettingsView(settings: .constant(SeparationSettings()))
-    }
-    .frame(width: 400, height: 500)
-    .padding()
-}

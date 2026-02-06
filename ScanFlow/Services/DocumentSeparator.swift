@@ -12,29 +12,31 @@ import AppKit
 import Vision
 
 /// Settings for document separation
-struct SeparationSettings: Codable, Equatable {
-    var enabled: Bool = false
-    
+public struct SeparationSettings: Codable, Equatable {
+    public var enabled: Bool = false
+
     // Blank page detection
-    var useBlankPages: Bool = true
-    var blankSensitivity: Double = 0.5  // 0-1, higher = more sensitive
-    var deleteBlankPages: Bool = true
-    
+    public var useBlankPages: Bool = true
+    public var blankSensitivity: Double = 0.5  // 0-1, higher = more sensitive
+    public var deleteBlankPages: Bool = true
+
     // Barcode-based separation
-    var useBarcodes: Bool = false
-    var barcodePattern: String = ".*"  // Regex pattern to match separator barcodes
-    
+    public var useBarcodes: Bool = false
+    public var barcodePattern: String = ".*"  // Regex pattern to match separator barcodes
+
     // Content analysis
-    var useContentAnalysis: Bool = false
-    var similarityThreshold: Double = 0.3  // 0-1, lower = more likely to split
-    
+    public var useContentAnalysis: Bool = false
+    public var similarityThreshold: Double = 0.3  // 0-1, lower = more likely to split
+
     // Constraints
-    var minimumPagesPerDocument: Int = 1
-    
+    public var minimumPagesPerDocument: Int = 1
+
     // Advanced option
-    var allowManualAdjustment: Bool = false
-    
-    static let `default` = SeparationSettings()
+    public var allowManualAdjustment: Bool = false
+
+    public static let `default` = SeparationSettings()
+
+    public init() {}
 }
 
 /// Document separator for intelligently splitting batch scans

@@ -189,13 +189,3 @@ private struct GlassTextEditorStyle: ViewModifier {
         }
     }
 }
-
-// MARK: - Preview
-
-#Preview {
-    Form {
-        AIRenamingSettingsView(settings: .constant(NamingSettings()))
-    }
-    .frame(width: 400, height: 500)
-    .padding()
-}
