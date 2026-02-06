@@ -37,7 +37,7 @@ struct PreviewView: View {
                     Label("Refresh", systemImage: "arrow.clockwise")
                 }
                 .buttonStyle(.borderless)
-                .disabled(!appState.scannerManager.connectionState.isConnected && !appState.useMockScanner || isLoadingPreview)
+                .disabled((!appState.scannerManager.connectionState.isConnected && !appState.useMockScanner) || isLoadingPreview)
             }
             .padding()
 

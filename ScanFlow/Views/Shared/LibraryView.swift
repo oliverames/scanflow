@@ -43,9 +43,10 @@ struct LibraryView: View {
                     if isAnalyzing {
                         Label("Analyzing...", systemImage: "sparkle.magnifyingglass")
                     } else {
-                        Label("Create From Document", systemImage: "calendar.badge.plus")
+                        Label("Extract Actions", systemImage: "calendar.badge.plus")
                     }
                 }
+                .help("Extract calendar events and contacts from scanned document")
                 .buttonStyle(.bordered)
                 .disabled(selectedFiles.count != 1 || isAnalyzing)
                 #endif

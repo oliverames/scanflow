@@ -351,40 +351,41 @@ struct ControlPanelView: View {
 
                 if appState.currentPreset.useCustomScanArea {
                     VStack(spacing: 8) {
-                        HStack {
+                        HStack(spacing: 4) {
                             Text("X:")
                                 .font(.caption)
-                                .frame(width: 20)
-                            TextField("", value: $appState.currentPreset.scanAreaX, format: .number)
+                                .frame(width: 18, alignment: .trailing)
+                            TextField("", value: $appState.currentPreset.scanAreaX, format: .number.precision(.fractionLength(2)))
                                 .textFieldStyle(.roundedBorder)
-                                .frame(width: 50)
+                                .frame(minWidth: 50, maxWidth: 60)
                             Text("Y:")
                                 .font(.caption)
-                                .frame(width: 20)
-                            TextField("", value: $appState.currentPreset.scanAreaY, format: .number)
+                                .frame(width: 18, alignment: .trailing)
+                            TextField("", value: $appState.currentPreset.scanAreaY, format: .number.precision(.fractionLength(2)))
                                 .textFieldStyle(.roundedBorder)
-                                .frame(width: 50)
+                                .frame(minWidth: 50, maxWidth: 60)
                             Picker("", selection: $appState.currentPreset.measurementUnit) {
                                 ForEach(MeasurementUnit.allCases, id: \.self) { unit in
                                     Text(unit.rawValue).tag(unit)
                                 }
                             }
                             .labelsHidden()
-                            .frame(width: 80)
+                            .frame(minWidth: 70, maxWidth: 90)
                         }
-                        HStack {
+                        HStack(spacing: 4) {
                             Text("W:")
                                 .font(.caption)
-                                .frame(width: 20)
-                            TextField("", value: $appState.currentPreset.scanAreaWidth, format: .number)
+                                .frame(width: 18, alignment: .trailing)
+                            TextField("", value: $appState.currentPreset.scanAreaWidth, format: .number.precision(.fractionLength(2)))
                                 .textFieldStyle(.roundedBorder)
-                                .frame(width: 50)
+                                .frame(minWidth: 50, maxWidth: 60)
                             Text("H:")
                                 .font(.caption)
-                                .frame(width: 20)
-                            TextField("", value: $appState.currentPreset.scanAreaHeight, format: .number)
+                                .frame(width: 18, alignment: .trailing)
+                            TextField("", value: $appState.currentPreset.scanAreaHeight, format: .number.precision(.fractionLength(2)))
                                 .textFieldStyle(.roundedBorder)
-                                .frame(width: 50)
+                                .frame(minWidth: 50, maxWidth: 60)
+                            Spacer()
                         }
                     }
                     .font(.caption)

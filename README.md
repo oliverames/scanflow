@@ -167,6 +167,39 @@ On macOS 26 and later, ScanFlow can use on-device AI (Apple Intelligence via Fou
 
 **Privacy:** All AI processing happens on-device using Apple Intelligence. No document content is sent to external servers.
 
+### Document Separation (Settings > Processing)
+
+ScanFlow can intelligently split multi-page batch scans into separate documents.
+
+**Separation Methods:**
+
+| Method | Description |
+|--------|-------------|
+| Blank Pages | Split when a blank page is detected |
+| Barcode Markers | Split when a barcode matches a pattern |
+| Content Analysis | Split based on content similarity |
+
+**Settings:**
+
+| Setting | Description | Default |
+|---------|-------------|---------|
+| Enable Separation | Turn document separation on/off | Off |
+| Use Blank Pages | Split on blank pages | On |
+| Blank Sensitivity | Detection threshold (0-100%) | 50% |
+| Delete Blank Pages | Remove blank separator pages | On |
+| Use Barcodes | Split on barcode markers | Off |
+| Barcode Pattern | Regex pattern for separator barcodes | .* |
+| Use Content Analysis | Split on content changes | Off |
+| Similarity Threshold | Content similarity threshold (0-100%) | 30% |
+| Min Pages per Document | Minimum pages before allowing split | 1 |
+| Allow Manual Adjustment | Enable manual boundary editing | Off |
+
+**How it works:**
+1. Scan a batch of documents through the ADF
+2. ScanFlow analyzes page transitions for boundaries
+3. Multiple PDFs are created, one per detected document
+4. Boundaries can be manually adjusted if enabled
+
 ## Scan Settings Reference
 
 ### Filing Tab
@@ -300,46 +333,70 @@ ScanFlow/
 ├── ScanFlow/
 │   ├── ScanFlowApp.swift              # App entry point
 │   ├── AppLifecycleDelegate.swift     # Background mode, menu bar, lifecycle
+│   ├── ScanFlow.entitlements          # App sandbox and permissions
 │   ├── Models/
 │   │   ├── ScanPreset.swift           # Preset configuration model
 │   │   ├── ScannedFile.swift          # Scanned file metadata
 │   │   ├── QueuedScan.swift           # Scan queue item
-│   │   └── ScanMetadata.swift         # Scan result metadata
+│   │   ├── ScanMetadata.swift         # Scan result metadata
+│   │   └── DocumentActionSuggestion.swift  # Calendar/Contact suggestions
 │   ├── ViewModels/
 │   │   ├── AppState.swift             # App state management (@Observable)
 │   │   ├── ScannerManager.swift       # ICC scanner control
-│   │   ├── ImageProcessor.swift       # Image processing pipeline
-│   │   ├── PDFExporter.swift          # PDF generation
+│   │   ├── ImageProcessor.swift       # Image processing pipeline (OCR, blank detection)
+│   │   ├── PDFExporter.swift          # PDF generation with OCR
 │   │   └── SettingsStore.swift        # Persistent settings (@AppStorage)
 │   ├── Services/
-│   │   ├── AIFileNamer.swift          # AI-assisted file naming
-│   │   ├── DocumentActionService.swift # Calendar/Contacts integration
+│   │   ├── AIFileNamer.swift          # AI-assisted file naming (FoundationModels)
+│   │   ├── BarcodeRecognizer.swift    # Barcode detection for separation
+│   │   ├── DocumentActionAnalyzer.swift    # Text analysis for suggestions
+│   │   ├── DocumentActionService.swift     # Calendar/Contacts creation
+│   │   ├── DocumentSeparator.swift    # Intelligent document separation
+│   │   ├── StructuredDataExtractor.swift   # Date/email/phone extraction
 │   │   ├── RemoteScanServer.swift     # macOS scan server
 │   │   ├── RemoteScanClient.swift     # iOS scan client
-│   │   └── FolderActionsSupport.swift # Folder monitoring
+│   │   ├── RemoteScanModels.swift     # Remote scan data models
+│   │   ├── FolderActionsSupport.swift # Folder monitoring
+│   │   └── TWAINBridge.swift          # TWAIN scanner support (BETA)
+│   ├── Resources/
+│   │   ├── Info-macOS.plist           # macOS app configuration
+│   │   └── Info-iOS.plist             # iOS app configuration
 │   └── Views/
 │       ├── macOS/
-│       │   ├── MainWindow.swift
-│       │   ├── ScannerSelectionView.swift  # Liquid Glass UI
-│       │   └── SettingsView.swift
+│       │   ├── MainWindow.swift       # Main window with Liquid Glass
+│       │   ├── ScannerSelectionView.swift  # Scanner picker
+│       │   ├── SettingsView.swift     # Settings panels
+│       │   └── SidebarView.swift      # Navigation sidebar
 │       ├── iOS/
-│       │   ├── RemoteScanPanel.swift
-│       │   └── ...
+│       │   ├── ContentView.swift      # iOS tab-based UI
+│       │   └── RemoteScanPanel.swift  # Remote scanning controls
 │       └── Shared/
-│           ├── ScanView.swift
-│           ├── LibraryView.swift
-│           ├── QueueView.swift
-│           ├── PresetView.swift
+│           ├── ScanView.swift         # Main scanning interface
+│           ├── LibraryView.swift      # Scanned files browser
+│           ├── QueueView.swift        # Scan queue management
+│           ├── PresetView.swift       # Preset editor
 │           └── Components/
-│               ├── ControlPanelView.swift
-│               ├── PreviewView.swift
-│               └── AIRenamingSettingsView.swift
+│               ├── ControlPanelView.swift  # Scan settings controls
+│               ├── PreviewView.swift       # Scan preview with zoom
+│               ├── ScannerStatusView.swift # Connection status
+│               ├── AIRenamingSettingsView.swift        # AI naming settings
+│               ├── DocumentSeparationSettingsView.swift # Separation settings
+│               └── DocumentActionSheet.swift           # Action suggestions UI
 ├── Tests/
-│   ├── SettingsStoreTests.swift
-│   ├── ModelsTests.swift
-│   ├── RemoteScanTests.swift
-│   ├── AIFileNamerTests.swift
-│   └── DocumentActionServiceTests.swift
+│   ├── AIFileNamerTests.swift         # AI naming tests
+│   ├── BarcodeRecognizerTests.swift   # Barcode detection tests
+│   ├── DocumentActionAnalyzerTests.swift   # Text analysis tests
+│   ├── DocumentActionServiceTests.swift    # Action service tests
+│   ├── DocumentSeparatorTests.swift   # Separation logic tests
+│   ├── ImageProcessorTests.swift      # Image processing tests
+│   ├── ModelsTests.swift              # Data model tests
+│   ├── PDFExporterTests.swift         # PDF export tests
+│   ├── RemoteScanCodecTests.swift     # Remote scan protocol tests
+│   ├── RemoteScanTests.swift          # Remote scanning tests
+│   ├── ScanPresetTests.swift          # Preset tests
+│   ├── SettingsStoreTests.swift       # Settings persistence tests
+│   ├── StructuredDataExtractorTests.swift  # Data extraction tests
+│   └── UITests.swift                  # Comprehensive UI state tests
 └── ScanFlow.xcodeproj
 ```
 
@@ -381,13 +438,40 @@ xcodebuild test -scheme ScanFlow -destination 'platform=macOS'
 
 ### Test Coverage
 
-| Test Suite | Description |
-|------------|-------------|
-| SettingsStoreTests | Settings persistence and defaults |
-| ModelsTests | Data models (QueuedScan, ScannedFile, ScanMetadata, ScanStatus) |
-| RemoteScanTests | Remote scanning models and codec |
-| AIFileNamerTests | AI naming settings and error handling |
-| DocumentActionServiceTests | Calendar/Contacts detection |
+| Test Suite | Tests | Description |
+|------------|-------|-------------|
+| AIFileNamerTests | 9 | AI naming settings, availability, error handling |
+| AppStateUITests | 6 | Navigation, alerts, panel states |
+| BarcodeRecognizerTests | 14 | Barcode detection, patterns, filenames |
+| ColorModeUITests | 2 | Color mode selection |
+| DocumentActionAnalyzerTests | 3 | Event and contact detection |
+| DocumentActionAnalyzerExtendedTests | 7 | Date, email, phone format detection |
+| DocumentActionServiceTests | 4 | Service properties and errors |
+| DocumentActionUITests | 4 | Suggestion UI models |
+| DocumentSeparatorTests | 9 | Separation logic, boundaries |
+| ExistingFileBehaviorUITests | 2 | File conflict handling |
+| ImageProcessorTests | 12 | OCR, blank detection, paper sizes |
+| LibraryUITests | 3 | Library file display |
+| ModelsTests | 12 | QueuedScan, ScannedFile, ScanMetadata, ScanStatus |
+| NamingSettingsUITests | 3 | AI naming UI settings |
+| PDFExporterTests | 1 | PDF export with OCR |
+| PresetUITests | 4 | Preset management |
+| QueueUITests | 5 | Scan queue operations |
+| QueuedScanStatusUITests | 2 | Scan status states |
+| RemoteScanCodecTests | 2 | Protocol encoding/decoding |
+| RemoteScanCodecExtendedTests | 5 | Large payloads, multiple documents |
+| RemoteScanModelsTests | 7 | Remote scan data models |
+| ResolutionUITests | 2 | Resolution settings |
+| ScanFormatUITests | 2 | Output format selection |
+| ScanMetadataTests | 3 | Metadata model |
+| ScanPresetTests | 2 | Preset defaults |
+| ScannedFileTests | 4 | File metadata |
+| SeparationSettingsUITests | 4 | Separation UI settings |
+| SettingsStoreTests | 3 | Settings persistence |
+| SettingsUITests | 5 | Settings panel states |
+| StructuredDataExtractorTests | 2 | Data extraction |
+
+**Total: 138 tests**
 
 ### Mock Scanner
 

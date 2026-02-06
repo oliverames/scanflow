@@ -14,15 +14,6 @@ struct RemoteScanModelsTests {
 
     // MARK: - RemoteScanRequest Tests
 
-    @Test("RemoteScanRequest default initialization")
-    func remoteScanRequestDefaults() {
-        let request = RemoteScanRequest()
-
-        #expect(request.presetName == "")
-        #expect(request.searchablePDF == false)
-        #expect(request.forceSingleDocument == false)
-    }
-
     @Test("RemoteScanRequest custom initialization")
     func remoteScanRequestCustom() {
         let request = RemoteScanRequest(
@@ -34,6 +25,19 @@ struct RemoteScanModelsTests {
         #expect(request.presetName == "High Quality PDF")
         #expect(request.searchablePDF == true)
         #expect(request.forceSingleDocument == true)
+    }
+
+    @Test("RemoteScanRequest with nil preset name")
+    func remoteScanRequestNilPreset() {
+        let request = RemoteScanRequest(
+            presetName: nil,
+            searchablePDF: false,
+            forceSingleDocument: false
+        )
+
+        #expect(request.presetName == nil)
+        #expect(request.searchablePDF == false)
+        #expect(request.forceSingleDocument == false)
     }
 
     @Test("RemoteScanRequest is Codable")
@@ -145,7 +149,7 @@ struct RemoteScanCodecExtendedTests {
 
     @Test("Codec encodes and decodes request messages")
     func codecRequestRoundTrip() throws {
-        let codec = RemoteScanCodec()
+        var codec = RemoteScanCodec()
 
         let request = RemoteScanRequest(
             presetName: "Color PDF",
@@ -154,11 +158,12 @@ struct RemoteScanCodecExtendedTests {
         )
 
         let message = RemoteScanMessage.request(request)
-        let encoded = try codec.encode(message)
+        var encoded = try codec.encode(message)
 
-        let decoded = try codec.decode(encoded)
+        let decoded = codec.decodeMessages(from: &encoded)
 
-        if case .request(let decodedRequest) = decoded {
+        #expect(decoded.count == 1)
+        if let first = decoded.first, let decodedRequest = first.request {
             #expect(decodedRequest.presetName == request.presetName)
             #expect(decodedRequest.searchablePDF == request.searchablePDF)
         } else {
@@ -168,7 +173,7 @@ struct RemoteScanCodecExtendedTests {
 
     @Test("Codec encodes and decodes result messages")
     func codecResultRoundTrip() throws {
-        let codec = RemoteScanCodec()
+        var codec = RemoteScanCodec()
 
         let document = RemoteScanDocument(
             filename: "doc.pdf",
@@ -184,11 +189,12 @@ struct RemoteScanCodecExtendedTests {
         )
 
         let message = RemoteScanMessage.result(result)
-        let encoded = try codec.encode(message)
+        var encoded = try codec.encode(message)
 
-        let decoded = try codec.decode(encoded)
+        let decoded = codec.decodeMessages(from: &encoded)
 
-        if case .result(let decodedResult) = decoded {
+        #expect(decoded.count == 1)
+        if let first = decoded.first, let decodedResult = first.result {
             #expect(decodedResult.documents.count == 1)
             #expect(decodedResult.totalBytes == 200)
         } else {
@@ -198,15 +204,16 @@ struct RemoteScanCodecExtendedTests {
 
     @Test("Codec encodes and decodes error messages")
     func codecErrorRoundTrip() throws {
-        let codec = RemoteScanCodec()
+        var codec = RemoteScanCodec()
 
         let message = RemoteScanMessage.error("Scanner not connected")
-        let encoded = try codec.encode(message)
+        var encoded = try codec.encode(message)
 
-        let decoded = try codec.decode(encoded)
+        let decoded = codec.decodeMessages(from: &encoded)
 
-        if case .error(let errorMessage) = decoded {
-            #expect(errorMessage == "Scanner not connected")
+        #expect(decoded.count == 1)
+        if let first = decoded.first, let errorMsg = first.error {
+            #expect(errorMsg.message == "Scanner not connected")
         } else {
             Issue.record("Expected error message type")
         }
@@ -214,7 +221,7 @@ struct RemoteScanCodecExtendedTests {
 
     @Test("Codec handles large payloads")
     func codecLargePayload() throws {
-        let codec = RemoteScanCodec()
+        var codec = RemoteScanCodec()
 
         // Create a large base64 string (simulating a PDF)
         let largeData = Data(repeating: 0x41, count: 100_000) // 100KB of 'A's
@@ -234,12 +241,13 @@ struct RemoteScanCodecExtendedTests {
         )
 
         let message = RemoteScanMessage.result(result)
-        let encoded = try codec.encode(message)
+        var encoded = try codec.encode(message)
 
         // Should be able to decode without issues
-        let decoded = try codec.decode(encoded)
+        let decoded = codec.decodeMessages(from: &encoded)
 
-        if case .result(let decodedResult) = decoded {
+        #expect(decoded.count == 1)
+        if let first = decoded.first, let decodedResult = first.result {
             #expect(decodedResult.documents.first?.byteCount == 100_000)
         } else {
             Issue.record("Expected result message type")
@@ -248,7 +256,7 @@ struct RemoteScanCodecExtendedTests {
 
     @Test("Codec handles multiple documents")
     func codecMultipleDocuments() throws {
-        let codec = RemoteScanCodec()
+        var codec = RemoteScanCodec()
 
         let documents = (1...5).map { index in
             RemoteScanDocument(
@@ -266,10 +274,11 @@ struct RemoteScanCodecExtendedTests {
         )
 
         let message = RemoteScanMessage.result(result)
-        let encoded = try codec.encode(message)
-        let decoded = try codec.decode(encoded)
+        var encoded = try codec.encode(message)
+        let decoded = codec.decodeMessages(from: &encoded)
 
-        if case .result(let decodedResult) = decoded {
+        #expect(decoded.count == 1)
+        if let first = decoded.first, let decodedResult = first.result {
             #expect(decodedResult.documents.count == 5)
         } else {
             Issue.record("Expected result message type")
