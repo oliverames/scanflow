@@ -477,6 +477,68 @@ xcodebuild test -scheme ScanFlow -destination 'platform=macOS'
 
 For testing without hardware, enable "Use mock scanner" in Settings > Scanner. The mock scanner simulates scanning operations and returns test images.
 
+## Scanner Connectivity
+
+ScanFlow uses Apple's ImageCaptureCore framework to connect to scanners. Here's what you need to know:
+
+### Supported Connection Types
+
+| Connection | Description | Notes |
+|------------|-------------|-------|
+| USB | Direct USB connection | Most reliable, no network required |
+| Network (WiFi) | Wireless LAN connection | Scanner must be on same network |
+| Bonjour | Auto-discovery via mDNS | Works with AirPrint-compatible scanners |
+| WiFi Direct | Peer-to-peer wireless | Some scanners support direct connection |
+
+### Troubleshooting Connection Issues
+
+1. **Scanner not appearing:**
+   - Ensure scanner is powered on and connected
+   - For network scanners, verify same WiFi network
+   - Try restarting the scanner
+   - Check System Preferences > Printers & Scanners
+
+2. **Connection drops during scan:**
+   - Enable "Keep connected in background" in Settings
+   - For WiFi, ensure stable signal strength
+   - USB connections are more reliable for large batches
+
+3. **ADF not detected:**
+   - Some scanners require document in feeder before detection
+   - Check scanner documentation for ADF activation
+
+### Remote Scanning Setup
+
+To scan from iOS to a Mac with a connected scanner:
+
+1. **On Mac:** ScanFlow automatically starts the scan server
+2. **On iOS:** Open ScanFlow and go to the Scan tab
+3. **Connect:** Select your Mac from the discovered servers
+4. **Scan:** Tap "Scan on Mac" to trigger scan and receive PDF
+
+Both devices must be on the same local network. Grant local network permissions when prompted.
+
+## Feature Comparison
+
+| Feature | ScanFlow | ExactScan | VueScan |
+|---------|----------|-----------|---------|
+| Native macOS app | ✅ | ✅ | ❌ (Java) |
+| SwiftUI + Liquid Glass | ✅ | ❌ | ❌ |
+| ImageCaptureCore | ✅ | ✅ | ❌ |
+| TWAIN support | 🔶 Beta | ✅ | ✅ |
+| Searchable PDF (OCR) | ✅ | ✅ | ✅ |
+| AI file naming | ✅ | ❌ | ❌ |
+| Document separation | ✅ | ✅ | ❌ |
+| Calendar/Contacts | ✅ | ❌ | ❌ |
+| Remote scanning (iOS) | ✅ | ❌ | ❌ |
+| Barcode recognition | ✅ | ✅ | ✅ |
+| Batch scanning (ADF) | ✅ | ✅ | ✅ |
+| Background mode | ✅ | ❌ | ❌ |
+| Menu bar app | ✅ | ❌ | ❌ |
+| App Sandbox | ✅ | ❌ | ❌ |
+| On-device AI | ✅ | ❌ | ❌ |
+| Price | Free | $99 | $40 |
+
 ## Privacy & Security
 
 ScanFlow is designed with privacy in mind:
