@@ -6,11 +6,15 @@
 //
 
 import SwiftUI
+#if os(macOS)
+import Sparkle
+#endif
 
 @main
 struct ScanFlowApp: App {
     #if os(macOS)
     @NSApplicationDelegateAdaptor(AppLifecycleDelegate.self) private var appDelegate
+    private let softwareUpdater = SoftwareUpdater.shared
     #endif
     @State private var appState: AppState
 
@@ -33,6 +37,11 @@ struct ScanFlowApp: App {
         .defaultSize(width: 1200, height: 750)
         .windowResizability(.contentSize)
         .commands {
+            // Check for Updates menu item (after About)
+            CommandGroup(after: .appInfo) {
+                CheckForUpdatesView(updater: softwareUpdater.updater)
+            }
+
             CommandGroup(replacing: .newItem) {
                 Button("Start Scan") {
                     Task {

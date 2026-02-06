@@ -101,5 +101,13 @@
     <!-- Imported UTIs -->
     <key>UTImportedTypeDeclarations</key>
     <array/>
+
+    <!-- Sparkle Software Updates -->
+    <key>SUFeedURL</key>
+    <string>https://raw.githubusercontent.com/oliverames/scanflow/main/appcast.xml</string>
+    <key>SUPublicEDKey</key>
+    <string>NIhfyD083qOzYZteoMsBOljz/u7/ptMziiHheqt3mns=</string>
+    <key>SUEnableAutomaticChecks</key>
+    <true/>
 </dict>
 </plist>

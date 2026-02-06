@@ -15,11 +15,15 @@ let package = Package(
             targets: ["ScanFlow"]
         )
     ],
-    dependencies: [],
+    dependencies: [
+        .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.6.0")
+    ],
     targets: [
         .executableTarget(
             name: "ScanFlow",
-            dependencies: [],
+            dependencies: [
+                .product(name: "Sparkle", package: "Sparkle", condition: .when(platforms: [.macOS]))
+            ],
             path: "ScanFlow",
             exclude: [],
             resources: [
