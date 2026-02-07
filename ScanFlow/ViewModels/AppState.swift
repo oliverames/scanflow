@@ -16,6 +16,12 @@ import ImageCaptureCore
 #endif
 
 private let logger = Logger(subsystem: "com.scanflow.app", category: "AppState")
+private let presetsStorageKey = "customPresets"
+
+private struct PresetStorePayload: Codable {
+    let schemaVersion: Int
+    let customPresets: [ScanPreset]
+}
 
 public enum NavigationSection: String, CaseIterable, Identifiable {
     case scan = "Scan"
@@ -25,7 +31,7 @@ public enum NavigationSection: String, CaseIterable, Identifiable {
 
     public var id: String { rawValue }
 
-    public var iconName: String {
+    var iconName: String {
         switch self {
         case .scan: return "scanner"
         case .queue: return "list.bullet"
@@ -38,59 +44,64 @@ public enum NavigationSection: String, CaseIterable, Identifiable {
 @MainActor
 @Observable
 public class AppState {
-    public var scannerManager = ScannerManager()
+    public var scannerManager: ScannerManager
+    @ObservationIgnored private var scanExecutor: ScanExecuting
     #if os(macOS)
-    public var imageProcessor: ImageProcessor
-    public var documentActionService: DocumentActionService
-    @ObservationIgnored public lazy var remoteScanServer: RemoteScanServer = RemoteScanServer(scanHandler: { [weak self] request in
+    var twainBridge: TWAINBridge
+    var imageProcessor: ImageProcessor
+    var documentActionService: DocumentActionService
+    @ObservationIgnored private lazy var remoteScanServer: RemoteScanServer = RemoteScanServer(scanHandler: { [weak self] request in
         guard let self else {
             throw RemoteScanServer.ServerError.serverUnavailable
         }
         return try await self.performRemoteScan(request)
+    }, authorizeRequest: { [weak self] request in
+        guard let self else { return false }
+        return self.isRemoteScanAuthorized(request)
     })
     #else
-    public var remoteScanClient: RemoteScanClient
+    var remoteScanClient: RemoteScanClient
     #endif
-    public var scanQueue: [QueuedScan] = []
-    public var scannedFiles: [ScannedFile] = []
+    var scanQueue: [QueuedScan] = []
+    var scannedFiles: [ScannedFile] = []
     public var presets: [ScanPreset] = ScanPreset.defaults
     public var currentPreset: ScanPreset = ScanPreset.quickScan
     public var selectedSection: NavigationSection = .scan
-    public var isScanning: Bool = false
-    public var showingAlert: Bool = false
-    public var alertMessage: String = ""
-    public var showScanSettings: Bool = true
-    public var showScannerSelection: Bool = false
-    public var isBackgroundModeEnabled: Bool = false
+    var isScanning: Bool = false
+    var showingAlert: Bool = false
+    var alertMessage: String = ""
+    var showScanSettings: Bool = true
+    var showScannerSelection: Bool = false
+    var isBackgroundModeEnabled: Bool = false
 
     // Settings - use separate ObservableObject to avoid @Observable/@AppStorage conflict
     @ObservationIgnored private var _settings = SettingsStore()
     
-    public var defaultResolution: Int {
+    var defaultResolution: Int {
         get { _settings.defaultResolution }
         set { _settings.defaultResolution = newValue }
     }
-    public var defaultFormat: String {
+    var defaultFormat: String {
         get { _settings.defaultFormat }
         set { _settings.defaultFormat = newValue }
     }
-    public var scanDestination: String {
+    var scanDestination: String {
         get { _settings.scanDestination }
         set { _settings.scanDestination = newValue }
     }
-    public var autoOpenDestination: Bool {
+    var autoOpenDestination: Bool {
         get { _settings.autoOpenDestination }
         set { _settings.autoOpenDestination = newValue }
     }
-    public var organizationPattern: String {
+    var organizationPattern: String {
         get { _settings.organizationPattern }
         set { _settings.organizationPattern = newValue }
     }
-    public var fileNamingTemplate: String {
+    var fileNamingTemplate: String {
         get { _settings.fileNamingTemplate }
         set { _settings.fileNamingTemplate = newValue }
     }
-    public var useMockScanner: Bool {
+    var useMockScanner: Bool {
         get { _settings.useMockScanner }
         set {
             _settings.useMockScanner = newValue
@@ -98,71 +109,128 @@ public class AppState {
         }
     }
 
-    public var keepConnectedInBackground: Bool {
+    var keepConnectedInBackground: Bool {
         get { _settings.keepConnectedInBackground }
         set { _settings.keepConnectedInBackground = newValue }
     }
 
-    public var shouldPromptForBackgroundConnection: Bool {
+    var shouldPromptForBackgroundConnection: Bool {
         get { _settings.shouldPromptForBackgroundConnection }
         set { _settings.shouldPromptForBackgroundConnection = newValue }
     }
 
-    public var hasConnectedScanner: Bool {
+    var hasConnectedScanner: Bool {
         get { _settings.hasConnectedScanner }
         set { _settings.hasConnectedScanner = newValue }
     }
 
-    public var autoStartScanWhenReady: Bool {
+    var autoStartScanWhenReady: Bool {
         get { _settings.autoStartScanWhenReady }
         set { _settings.autoStartScanWhenReady = newValue }
     }
 
-    public var startAtLogin: Bool {
+    var startAtLogin: Bool {
         get { _settings.startAtLogin }
         set { _settings.startAtLogin = newValue }
     }
 
-    public var remoteScanServerEnabled: Bool {
+    var remoteScanServerEnabled: Bool {
         get { _settings.remoteScanServerEnabled }
         set { _settings.remoteScanServerEnabled = newValue }
     }
 
-    public var autoStartScannerIDs: Set<String> {
+    var remoteScanRequirePairingToken: Bool {
+        get { _settings.remoteScanRequirePairingToken }
+        set { _settings.remoteScanRequirePairingToken = newValue }
+    }
+
+    var remoteScanPairingToken: String {
+        get { _settings.remoteScanPairingToken }
+        set { _settings.remoteScanPairingToken = newValue.trimmingCharacters(in: .whitespacesAndNewlines) }
+    }
+
+    var remoteScanClientPairingToken: String {
+        get { _settings.remoteScanClientPairingToken }
+        set { _settings.remoteScanClientPairingToken = newValue.trimmingCharacters(in: .whitespacesAndNewlines) }
+    }
+
+    var autoStartScannerIDs: Set<String> {
         get { _settings.autoStartScannerIDs }
         set { _settings.autoStartScannerIDs = newValue }
     }
 
-    public var menuBarAlwaysEnabled: Bool {
+    var menuBarAlwaysEnabled: Bool {
         get { _settings.menuBarAlwaysEnabled }
         set { _settings.menuBarAlwaysEnabled = newValue }
     }
 
+    var scannerDiscoveryTimeoutSeconds: Int {
+        get { _settings.scannerDiscoveryTimeoutSeconds }
+        set {
+            let clamped = min(max(newValue, 1), 15)
+            _settings.scannerDiscoveryTimeoutSeconds = clamped
+            scannerManager.discoveryTimeoutSeconds = clamped
+        }
+    }
+
+    var scanTimeoutSeconds: Int {
+        get { _settings.scanTimeoutSeconds }
+        set {
+            let clamped = min(max(newValue, 30), 900)
+            _settings.scanTimeoutSeconds = clamped
+            scannerManager.scanTimeoutSeconds = clamped
+        }
+    }
+
+    var preserveTemporaryScanFiles: Bool {
+        get { _settings.preserveTemporaryScanFiles }
+        set {
+            _settings.preserveTemporaryScanFiles = newValue
+            scannerManager.preserveTemporaryScanFiles = newValue
+        }
+    }
+
+    var maxBufferedPages: Int {
+        get { _settings.maxBufferedPages }
+        set {
+            let clamped = min(max(newValue, 25), 500)
+            _settings.maxBufferedPages = clamped
+            scannerManager.maxBufferedPages = clamped
+        }
+    }
+
     /// Tracks whether a scan was performed during this app session (not persisted)
-    public var didScanThisSession: Bool = false
+    var didScanThisSession: Bool = false
 
     // AI-assisted file naming settings (defaults for new presets)
-    public var defaultNamingSettings: NamingSettings {
+    var defaultNamingSettings: NamingSettings {
         get { _settings.defaultNamingSettings }
         set { _settings.defaultNamingSettings = newValue }
     }
 
     // Document separation settings (defaults for new presets)
-    public var defaultSeparationSettings: SeparationSettings {
+    var defaultSeparationSettings: SeparationSettings {
         get { _settings.defaultSeparationSettings }
         set { _settings.defaultSeparationSettings = newValue }
     }
 
-    public init() {
+    init(scanExecutor: ScanExecuting? = nil) {
+        let manager = ScannerManager()
+        self.scannerManager = manager
+        #if os(macOS)
+        self.twainBridge = TWAINBridge(scannerManager: manager)
+        #endif
+        self.scanExecutor = scanExecutor ?? manager
         logger.info("AppState initializing...")
         #if os(macOS)
         let processor = ImageProcessor()
         imageProcessor = processor
         documentActionService = DocumentActionService(imageProcessor: processor)
+        ensureRemotePairingToken()
+        applyRuntimeScannerSettings()
         if remoteScanServerEnabled {
             remoteScanServer.start()
         }
-        scannerManager.useMockScanner = useMockScanner
         scannerManager.onDeviceReady = { [weak self] device in
             self?.handleScannerReadyForAutoScan(device: device)
         }
@@ -190,33 +258,93 @@ public class AppState {
         logger.info("AppState initialized with \(self.presets.count) presets")
     }
 
-    public func loadPresets() {
-        logger.info("Loading presets from UserDefaults")
-        guard let data = UserDefaults.standard.data(forKey: "customPresets") else {
-            logger.info("No custom presets found, using defaults")
-            return
-        }
-        
-        do {
-            let customPresets = try JSONDecoder().decode([ScanPreset].self, from: data)
-            presets = ScanPreset.defaults + customPresets
-            logger.info("Loaded \(customPresets.count) custom presets")
-        } catch {
-            logger.error("Failed to decode custom presets: \(error.localizedDescription). Using defaults.")
-            presets = ScanPreset.defaults
+    public convenience init() {
+        self.init(scanExecutor: nil)
+    }
+
+    private func applyRuntimeScannerSettings() {
+        scannerManager.useMockScanner = useMockScanner
+        scannerManager.discoveryTimeoutSeconds = min(max(_settings.scannerDiscoveryTimeoutSeconds, 1), 15)
+        scannerManager.scanTimeoutSeconds = min(max(_settings.scanTimeoutSeconds, 30), 900)
+        scannerManager.preserveTemporaryScanFiles = _settings.preserveTemporaryScanFiles
+        scannerManager.maxBufferedPages = min(max(_settings.maxBufferedPages, 25), 500)
+        if scanExecutor === scannerManager {
+            scanExecutor = scannerManager
         }
     }
 
-    public func savePresets() {
+    func setScanExecutorForTesting(_ executor: ScanExecuting) {
+        scanExecutor = executor
+    }
+
+    private func ensureRemotePairingToken() {
+        if _settings.remoteScanPairingToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            _settings.remoteScanPairingToken = Self.generatePairingToken()
+        }
+    }
+
+    func loadPresets() {
+        logger.info("Loading presets from UserDefaults")
+        guard let data = UserDefaults.standard.data(forKey: presetsStorageKey) else {
+            logger.info("No custom presets found, using defaults")
+            return
+        }
+
+        do {
+            let payload = try JSONDecoder().decode(PresetStorePayload.self, from: data)
+            let customPresets = migrateCustomPresets(payload.customPresets, from: payload.schemaVersion)
+            presets = ScanPreset.defaults + customPresets
+            logger.info("Loaded \(customPresets.count) custom presets")
+        } catch {
+            logger.warning("Failed to decode versioned payload, attempting legacy format")
+            do {
+                let legacyPresets = try JSONDecoder().decode([ScanPreset].self, from: data)
+                let migrated = migrateCustomPresets(legacyPresets, from: 1)
+                presets = ScanPreset.defaults + migrated
+                savePresets()
+                logger.info("Migrated \(migrated.count) legacy custom presets to schema v2")
+            } catch {
+                logger.error("Failed to decode custom presets: \(error.localizedDescription). Using defaults.")
+                presets = ScanPreset.defaults
+            }
+        }
+    }
+
+    func savePresets() {
         let customPresets = presets.filter { preset in
             !ScanPreset.defaults.contains { $0.id == preset.id }
         }
         do {
-            let data = try JSONEncoder().encode(customPresets)
-            UserDefaults.standard.set(data, forKey: "customPresets")
+            let payload = PresetStorePayload(schemaVersion: 2, customPresets: customPresets)
+            let data = try JSONEncoder().encode(payload)
+            UserDefaults.standard.set(data, forKey: presetsStorageKey)
             logger.info("Saved \(customPresets.count) custom presets")
         } catch {
             logger.error("Failed to encode presets: \(error.localizedDescription)")
+        }
+    }
+
+    private func migrateCustomPresets(_ input: [ScanPreset], from schemaVersion: Int) -> [ScanPreset] {
+        input.map { preset in
+            var migrated = preset
+            migrated.name = migrated.name.trimmingCharacters(in: .whitespacesAndNewlines)
+            if migrated.name.isEmpty {
+                migrated.name = "Untitled Preset"
+            }
+
+            // Keep legacy data safe across schema revisions.
+            migrated.resolution = min(max(migrated.resolution, 75), 2400)
+            migrated.splitPageNumber = max(1, migrated.splitPageNumber)
+            migrated.blankPageSensitivity = min(max(migrated.blankPageSensitivity, 0), 1)
+            migrated.bwThreshold = min(max(migrated.bwThreshold, 0), 255)
+            if migrated.destination.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                migrated.destination = scanDestination
+            }
+
+            if schemaVersion < 2, migrated.timerSeconds < 0.1 {
+                migrated.timerSeconds = 1.5
+            }
+            return migrated
         }
     }
 
@@ -232,7 +360,7 @@ public class AppState {
         logger.info("Queue now contains \(self.scanQueue.count) items")
     }
 
-    public func removeFromQueue(scan: QueuedScan) {
+    func removeFromQueue(scan: QueuedScan) {
         logger.info("Removing scan from queue: \(scan.name)")
         scanQueue.removeAll { $0.id == scan.id }
     }
@@ -250,33 +378,106 @@ public class AppState {
             logger.info("Processing queue item \(index + 1): \(self.scanQueue[index].name)")
             scanQueue[index].status = .scanning
 
-            do {
-                #if os(macOS)
-                logger.info("Initiating scan with preset: \(self.scanQueue[index].preset.name)")
-                let result = try await scannerManager.scan(with: scanQueue[index].preset)
-                logger.info("Scan completed, processing image...")
+            var attempt = 0
+            let maxAttempts = 2
+            while attempt <= maxAttempts {
+                do {
+                    #if os(macOS)
+                    logger.info("Initiating scan with preset: \(self.scanQueue[index].preset.name), attempt \(attempt + 1)")
+                    let result = try await scanExecutor.scan(with: scanQueue[index].preset)
+                    logger.info("Scan completed, processing image...")
 
-                scanQueue[index].status = .processing
-                let savedFiles = try await saveScannedImage(result, preset: scanQueue[index].preset)
-                scannedFiles.append(contentsOf: savedFiles)
-                if let firstFile = savedFiles.first {
-                    logger.info("Image saved to: \(firstFile.fileURL.path)")
+                    scanQueue[index].status = .processing
+                    let savedFiles = try await saveScannedImage(result, preset: scanQueue[index].preset)
+                    scannedFiles.append(contentsOf: savedFiles)
+                    if let firstFile = savedFiles.first {
+                        logger.info("Image saved to: \(firstFile.fileURL.path)")
+                    }
+
+                    scanQueue[index].status = .completed
+                    didScanThisSession = true
+                    logger.info("Scan \(index + 1) completed successfully")
+                    #endif
+                    break
+                } catch {
+                    let isLastAttempt = attempt >= maxAttempts
+                    logger.error("Scan attempt \(attempt + 1) failed: \(error.localizedDescription)")
+
+                    #if os(macOS)
+                    let shouldRetry: Bool
+                    if scanExecutor === scannerManager {
+                        shouldRetry = await attemptRecoveryIfNeeded(after: error)
+                    } else {
+                        shouldRetry = isTransientScannerError(error)
+                    }
+                    #else
+                    let shouldRetry = false
+                    #endif
+
+                    if !isLastAttempt, shouldRetry {
+                        attempt += 1
+                        scanQueue[index].status = .scanning
+                        continue
+                    }
+
+                    scanQueue[index].status = .failed(error.localizedDescription)
+                    showAlert(message: "Scan failed: \(error.localizedDescription)")
+                    break
                 }
-
-                scanQueue[index].status = .completed
-                didScanThisSession = true
-                logger.info("Scan \(index + 1) completed successfully")
-                #endif
-            } catch {
-                logger.error("Scan failed: \(error.localizedDescription)")
-                scanQueue[index].status = .failed(error.localizedDescription)
-                showAlert(message: "Scan failed: \(error.localizedDescription)")
             }
         }
 
         isScanning = false
         logger.info("Scan process completed")
     }
+
+    #if os(macOS)
+    private func attemptRecoveryIfNeeded(after error: Error) async -> Bool {
+        guard isTransientScannerError(error) else {
+            return false
+        }
+
+        logger.info("Attempting scanner recovery after transient failure")
+        guard let scanner = scannerManager.selectedScanner else {
+            return false
+        }
+
+        if scannerManager.connectionState.isConnected {
+            await scannerManager.disconnect()
+        }
+
+        do {
+            try await Task.sleep(for: .milliseconds(750))
+            try await scannerManager.connect(to: scanner)
+            return scannerManager.connectionState.isConnected
+        } catch {
+            logger.error("Scanner recovery failed: \(error.localizedDescription)")
+            return false
+        }
+    }
+
+    private func isTransientScannerError(_ error: Error) -> Bool {
+        if let scannerError = error as? ScannerError {
+            switch scannerError {
+            case .scanTimeout, .notConnected, .connectionFailed:
+                return true
+            case .scanCancelled, .scanFailed, .noScannersFound, .noFunctionalUnit:
+                return false
+            }
+        }
+
+        let description = error.localizedDescription.lowercased()
+        let transientHints = [
+            "timed out",
+            "timeout",
+            "disconnected",
+            "not connected",
+            "paper jam",
+            "busy"
+        ]
+        return transientHints.contains { description.contains($0) }
+    }
+    #endif
 
     #if os(macOS)
     private func saveScannedImage(_ result: ScanResult, preset: ScanPreset) async throws -> [ScannedFile] {
@@ -290,7 +491,7 @@ public class AppState {
             throw error
         }
 
-        let images = result.images
+        let images = try await prepareOutputPages(from: result.images, preset: preset)
         let pageCount = images.count
         logger.info("Saving \(pageCount) page(s) to \(destURL.path)")
 
@@ -354,8 +555,14 @@ public class AppState {
 
         let extensionString = fileExtension(for: preset.format)
         let aiNamer = AIFileNamer(imageProcessor: imageProcessor)
+        let maxPagesPerDocument = 200
 
         for (documentIndex, documentPages) in documents.enumerated() {
+            if documentPages.count > maxPagesPerDocument {
+                logger.error("Document contains \(documentPages.count) pages, exceeding safety limit \(maxPagesPerDocument)")
+                throw ScannerError.scanFailed
+            }
+
             let baseName = await preferredBaseName(
                 for: documentPages,
                 documentIndex: documentIndex,
@@ -367,9 +574,13 @@ public class AppState {
             switch preset.format {
             case .jpeg:
                 for (index, image) in documentPages.enumerated() {
-                    guard let tiffData = image.tiffRepresentation,
-                          let bitmapImage = NSBitmapImageRep(data: tiffData),
-                          let imageData = bitmapImage.representation(using: .jpeg, properties: [.compressionFactor: preset.quality]) else {
+                    guard let imageData = autoreleasepool(invoking: { () -> Data? in
+                        guard let tiffData = image.tiffRepresentation,
+                              let bitmapImage = NSBitmapImageRep(data: tiffData) else {
+                            return nil
+                        }
+                        return bitmapImage.representation(using: .jpeg, properties: [.compressionFactor: preset.quality])
+                    }) else {
                         throw ScannerError.scanFailed
                     }
                     let filename = filenameForDocument(baseName: baseName, extensionString: extensionString, pageIndex: documentPages.count > 1 ? index : nil)
@@ -380,9 +591,13 @@ public class AppState {
 
             case .png:
                 for (index, image) in documentPages.enumerated() {
-                    guard let tiffData = image.tiffRepresentation,
-                          let bitmapImage = NSBitmapImageRep(data: tiffData),
-                          let imageData = bitmapImage.representation(using: .png, properties: [:]) else {
+                    guard let imageData = autoreleasepool(invoking: { () -> Data? in
+                        guard let tiffData = image.tiffRepresentation,
+                              let bitmapImage = NSBitmapImageRep(data: tiffData) else {
+                            return nil
+                        }
+                        return bitmapImage.representation(using: .png, properties: [:])
+                    }) else {
                         throw ScannerError.scanFailed
                     }
                     let filename = filenameForDocument(baseName: baseName, extensionString: extensionString, pageIndex: documentPages.count > 1 ? index : nil)
@@ -393,7 +608,7 @@ public class AppState {
 
             case .tiff:
                 for (index, image) in documentPages.enumerated() {
-                    guard let tiffData = image.tiffRepresentation else {
+                    guard let tiffData = autoreleasepool(invoking: { image.tiffRepresentation }) else {
                         throw ScannerError.scanFailed
                     }
                     let filename = filenameForDocument(baseName: baseName, extensionString: extensionString, pageIndex: documentPages.count > 1 ? index : nil)
@@ -405,7 +620,7 @@ public class AppState {
             case .pdf:
                 let pdfDocument = PDFDocument()
                 for (index, image) in documentPages.enumerated() {
-                    if let pdfPage = PDFPage(image: image) {
+                    if let pdfPage = autoreleasepool(invoking: { PDFPage(image: image) }) {
                         if preset.searchablePDF {
                             if let text = try? await imageProcessor.recognizeText(image), !text.isEmpty {
                                 addTextAnnotation(to: pdfPage, text: text)
@@ -427,11 +642,15 @@ public class AppState {
             case .compressedPDF:
                 let pdfDocument = PDFDocument()
                 for (index, image) in documentPages.enumerated() {
-                    guard let tiffData = image.tiffRepresentation,
-                          let bitmapImage = NSBitmapImageRep(data: tiffData),
-                          let jpegData = bitmapImage.representation(using: .jpeg, properties: [.compressionFactor: preset.quality]),
-                          let jpegImage = NSImage(data: jpegData),
-                          let pdfPage = PDFPage(image: jpegImage) else {
+                    guard let pdfPage = autoreleasepool(invoking: { () -> PDFPage? in
+                        guard let tiffData = image.tiffRepresentation,
+                              let bitmapImage = NSBitmapImageRep(data: tiffData),
+                              let jpegData = bitmapImage.representation(using: .jpeg, properties: [.compressionFactor: preset.quality]),
+                              let jpegImage = NSImage(data: jpegData) else {
+                            return nil
+                        }
+                        return PDFPage(image: jpegImage)
+                    }) else {
                         logger.warning("Failed to create compressed PDF page from image \(index + 1)")
                         continue
                     }
@@ -486,14 +705,15 @@ public class AppState {
         searchable: Bool,
         forceSingleDocument: Bool
     ) async throws -> [RemoteScanDocument] {
-        var documents: [[NSImage]] = [pages]
+        let preparedPages = try await prepareOutputPages(from: pages, preset: preset)
+        var documents: [[NSImage]] = [preparedPages]
         if !forceSingleDocument {
             if preset.separationSettings.enabled {
                 let separator = DocumentSeparator(imageProcessor: imageProcessor, barcodeRecognizer: BarcodeRecognizer())
-                let separationResult = try await separator.separateDocuments(pages: pages, settings: preset.separationSettings)
+                let separationResult = try await separator.separateDocuments(pages: preparedPages, settings: preset.separationSettings)
                 documents = separationResult.documents
-            } else if preset.splitOnPage, pages.count > 1 {
-                documents = splitPages(pages: pages, chunkSize: preset.splitPageNumber)
+            } else if preset.splitOnPage, preparedPages.count > 1 {
+                documents = splitPages(pages: preparedPages, chunkSize: preset.splitPageNumber)
             }
         }
 
@@ -515,6 +735,142 @@ public class AppState {
         return results
     }
 
+    private func prepareOutputPages(from inputPages: [NSImage], preset: ScanPreset) async throws -> [NSImage] {
+        guard !inputPages.isEmpty else {
+            throw ScannerError.scanFailed
+        }
+
+        var outputPages: [NSImage] = []
+        let shouldProcess = shouldRunImageProcessing(for: preset)
+        let blankThreshold = blankDetectionThreshold(sensitivity: preset.blankPageSensitivity)
+        var blankPagesDetected = 0
+        var blankPagesDeleted = 0
+
+        for (index, originalPage) in inputPages.enumerated() {
+            var page = originalPage
+            if shouldProcess {
+                do {
+                    page = try await imageProcessor.process(page, with: preset)
+                } catch {
+                    logger.warning("Image processing failed for page \(index + 1): \(error.localizedDescription). Using original page.")
+                    page = originalPage
+                }
+            }
+
+            if preset.rotateEvenPages, index.isMultiple(of: 2) == false {
+                if let rotated = rotateImage(page, byDegrees: 180) {
+                    page = rotated
+                }
+            }
+
+            let variants = splitBookPagesIfNeeded(page, preset: preset)
+            for variant in variants {
+                if preset.blankPageHandling == .keep {
+                    outputPages.append(variant)
+                    continue
+                }
+
+                let isBlank = await imageProcessor.isBlankPage(variant, threshold: blankThreshold)
+                guard isBlank else {
+                    outputPages.append(variant)
+                    continue
+                }
+
+                blankPagesDetected += 1
+                switch preset.blankPageHandling {
+                case .keep:
+                    outputPages.append(variant)
+                case .askUser:
+                    // The queue scan flow is non-interactive; keep the page and notify once.
+                    outputPages.append(variant)
+                case .delete:
+                    blankPagesDeleted += 1
+                }
+            }
+        }
+
+        if preset.blankPageHandling == .askUser, blankPagesDetected > 0 {
+            showAlert(message: "Detected \(blankPagesDetected) blank page(s). Ask mode keeps blank pages; choose Delete to remove them automatically.")
+        }
+
+        if blankPagesDeleted > 0 {
+            logger.info("Removed \(blankPagesDeleted) blank page(s) before export")
+        }
+
+        if outputPages.isEmpty {
+            logger.error("All pages were filtered out before saving")
+            throw ScannerError.scanFailed
+        }
+
+        return outputPages
+    }
+
+    private func shouldRunImageProcessing(for preset: ScanPreset) -> Bool {
+        if preset.autoRotate || preset.autoCrop || preset.deskew || preset.restoreColor || preset.removeRedEye {
+            return true
+        }
+        if preset.mediaDetection != .none || preset.rotationAngle != .none || preset.descreen || preset.sharpen || preset.invertColors {
+            return true
+        }
+        if abs(preset.brightness) > 0.001 || abs(preset.contrast) > 0.001 || abs(preset.hue) > 0.001 || abs(preset.saturation) > 0.001 || abs(preset.lightness) > 0.001 {
+            return true
+        }
+        if abs(preset.gamma - 2.2) > 0.01 {
+            return true
+        }
+        return false
+    }
+
+    private func blankDetectionThreshold(sensitivity: Double) -> Double {
+        max(0.78, 0.98 - (sensitivity * 0.20))
+    }
+
+    private func splitBookPagesIfNeeded(_ image: NSImage, preset: ScanPreset) -> [NSImage] {
+        guard preset.splitBookPages else {
+            return [image]
+        }
+
+        guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil), cgImage.width > 1 else {
+            return [image]
+        }
+
+        let halfWidth = cgImage.width / 2
+        guard halfWidth > 0 else { return [image] }
+
+        let leftRect = CGRect(x: 0, y: 0, width: halfWidth, height: cgImage.height)
+        let rightRect = CGRect(x: halfWidth, y: 0, width: cgImage.width - halfWidth, height: cgImage.height)
+
+        guard let left = cgImage.cropping(to: leftRect),
+              let right = cgImage.cropping(to: rightRect) else {
+            return [image]
+        }
+
+        return [
+            NSImage(cgImage: left, size: NSSize(width: left.width, height: left.height)),
+            NSImage(cgImage: right, size: NSSize(width: right.width, height: right.height))
+        ]
+    }
+
+    private func rotateImage(_ image: NSImage, byDegrees degrees: CGFloat) -> NSImage? {
+        let radians = degrees * .pi / 180
+        let sourceRect = CGRect(origin: .zero, size: image.size)
+        let rotatedRect = sourceRect.applying(CGAffineTransform(rotationAngle: radians))
+        let outputSize = NSSize(width: abs(rotatedRect.width), height: abs(rotatedRect.height))
+
+        let output = NSImage(size: outputSize)
+        output.lockFocus()
+        defer { output.unlockFocus() }
+
+        let transform = NSAffineTransform()
+        transform.translateX(by: outputSize.width / 2, yBy: outputSize.height / 2)
+        transform.rotate(byDegrees: degrees)
+        transform.translateX(by: -image.size.width / 2, yBy: -image.size.height / 2)
+        transform.concat()
+
+        image.draw(at: .zero, from: .zero, operation: .copy, fraction: 1.0)
+        return output
+    }
+
     private func remoteDocumentFilename(base: String, index: Int?) -> String {
         let sanitizedBase = sanitizeFilenameInput(base.isEmpty ? "Remote Scan" : base)
         if let index {
@@ -524,10 +880,16 @@ public class AppState {
     }
 
     private func createRemotePDFData(from pages: [NSImage], searchable: Bool) async throws -> Data {
+        let maxPagesPerDocument = 200
+        if pages.count > maxPagesPerDocument {
+            logger.error("Remote document contains \(pages.count) pages, exceeding safety limit \(maxPagesPerDocument)")
+            throw ScannerError.scanFailed
+        }
+
         let pdfDocument = PDFDocument()
 
         for (index, image) in pages.enumerated() {
-            if let pdfPage = PDFPage(image: image) {
+            if let pdfPage = autoreleasepool(invoking: { PDFPage(image: image) }) {
                 if searchable {
                     if let text = try? await imageProcessor.recognizeText(image), !text.isEmpty {
                         addTextAnnotation(to: pdfPage, text: text)
@@ -546,6 +908,7 @@ public class AppState {
     }
     #endif
 
+    #if os(macOS)
     private func splitPages(pages: [NSImage], chunkSize: Int) -> [[NSImage]] {
         guard chunkSize > 1 else {
             return pages.map { [$0] }
@@ -567,7 +930,10 @@ public class AppState {
         aiNamer: AIFileNamer,
         fallback: () -> String
     ) async -> String {
-        var candidate = fallback()
+        let defaultCandidate = fallback()
+        var candidate = defaultCandidate
+        var aiNamingError: Error?
+        var promptedForFallback = false
 
         if preset.namingSettings.enabled {
             let availability = await AIFileNamer.isAvailable()
@@ -579,14 +945,40 @@ public class AppState {
                         candidate = aiCandidate
                     }
                 } catch {
-                    handleNamingFallback(error: error, settings: preset.namingSettings)
+                    aiNamingError = error
                 }
             } else {
-                handleNamingFallback(error: AIFileNamerError.modelUnavailable, settings: preset.namingSettings)
+                aiNamingError = AIFileNamerError.modelUnavailable
             }
         }
 
-        if preset.editEachFilename, let previewImage = pages.first {
+        if let aiNamingError {
+            switch preset.namingSettings.fallbackBehavior {
+            case .promptManual:
+                if let previewImage = pages.first {
+                    let fallbackLabel = "Document \(documentIndex + 1)"
+                    let manualName = promptForFilename(
+                        suggested: candidate,
+                        preview: previewImage,
+                        fallbackLabel: fallbackLabel
+                    )
+                    if let manualName, !manualName.isEmpty {
+                        candidate = manualName
+                    } else {
+                        showAlert(message: "AI naming failed. Using the default naming pattern.")
+                    }
+                    promptedForFallback = true
+                } else {
+                    showAlert(message: "AI naming failed. Using the default naming pattern.")
+                }
+            case .notifyAndFallback:
+                showAlert(message: "AI naming failed (\(aiNamingError.localizedDescription)). Using the default naming pattern.")
+            case .silentFallback:
+                break
+            }
+        }
+
+        if preset.editEachFilename, !promptedForFallback, let previewImage = pages.first {
             let fallbackLabel = "Document \(documentIndex + 1)"
             let manualName = promptForFilename(suggested: candidate, preview: previewImage, fallbackLabel: fallbackLabel)
             if let manualName, !manualName.isEmpty {
@@ -594,18 +986,8 @@ public class AppState {
             }
         }
 
-        return candidate
-    }
-
-    private func handleNamingFallback(error: Error, settings: NamingSettings) {
-        switch settings.fallbackBehavior {
-        case .promptManual:
-            showAlert(message: "AI naming unavailable. Using the default naming pattern.")
-        case .notifyAndFallback:
-            showAlert(message: "AI naming failed (\(error.localizedDescription)). Using the default naming pattern.")
-        case .silentFallback:
-            break
-        }
+        let sanitized = sanitizeFilenameInput(candidate)
+        return sanitized.isEmpty ? defaultCandidate : sanitized
     }
 
     #if os(macOS)
@@ -641,7 +1023,7 @@ public class AppState {
         return nil
     }
 
-    public func sanitizeFilenameInput(_ filename: String) -> String {
+    func sanitizeFilenameInput(_ filename: String) -> String {
         let invalidCharacters = CharacterSet(charactersIn: ":/\\?*\"<>|")
         let sanitized = filename.components(separatedBy: invalidCharacters).joined(separator: "")
         return sanitized.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -694,6 +1076,7 @@ public class AppState {
         attributes[.creationDateAttribute] = Date()
         document.documentAttributes = attributes
     }
+    #endif
 
     #if os(macOS)
     private func addTextAnnotation(to page: PDFPage, text: String) {
@@ -760,16 +1143,163 @@ public class AppState {
     }
     #endif
 
-    public func showAlert(message: String) {
+    func showAlert(message: String) {
         alertMessage = message
         showingAlert = true
     }
 
-    public func markScannerUsed() {
+    func markScannerUsed() {
         hasConnectedScanner = true
     }
 
-    public func enterBackgroundMode() {
+    #if os(macOS)
+    func revealTemporaryScanFolder() {
+        let folder = scannerManager.temporaryScanDirectoryURL
+        do {
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            NSWorkspace.shared.activateFileViewerSelecting([folder])
+        } catch {
+            showAlert(message: "Unable to reveal temporary folder: \(error.localizedDescription)")
+        }
+    }
+
+    func exportDiagnosticsBundle() {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyyMMdd-HHmmss"
+        let stamp = formatter.string(from: Date())
+
+        let desktop = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Desktop", isDirectory: true)
+        let bundleURL = desktop.appendingPathComponent("ScanFlow-Diagnostics-\(stamp)", isDirectory: true)
+
+        do {
+            try FileManager.default.createDirectory(at: bundleURL, withIntermediateDirectories: true)
+
+            struct DiagnosticsSummary: Codable {
+                let generatedAt: Date
+                let appVersion: String
+                let buildNumber: String
+                let osVersion: String
+                let scannerConnectionState: String
+                let scannerName: String
+                let availableScannerNames: [String]
+                let queueCount: Int
+                let scannedFilesCount: Int
+                let currentPreset: String
+                let settings: [String: String]
+            }
+
+            let settingsSnapshot: [String: String] = [
+                "defaultResolution": String(defaultResolution),
+                "defaultFormat": defaultFormat,
+                "scanDestination": scanDestination,
+                "remoteScanServerEnabled": String(remoteScanServerEnabled),
+                "remoteScanRequirePairingToken": String(remoteScanRequirePairingToken),
+                "menuBarAlwaysEnabled": String(menuBarAlwaysEnabled),
+                "keepConnectedInBackground": String(keepConnectedInBackground),
+                "autoStartScanWhenReady": String(autoStartScanWhenReady),
+                "scannerDiscoveryTimeoutSeconds": String(scannerDiscoveryTimeoutSeconds),
+                "scanTimeoutSeconds": String(scanTimeoutSeconds),
+                "preserveTemporaryScanFiles": String(preserveTemporaryScanFiles)
+                ,"maxBufferedPages": String(maxBufferedPages)
+            ]
+
+            let summary = DiagnosticsSummary(
+                generatedAt: Date(),
+                appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown",
+                buildNumber: Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "unknown",
+                osVersion: ProcessInfo.processInfo.operatingSystemVersionString,
+                scannerConnectionState: scannerManager.connectionState.description,
+                scannerName: scannerManager.selectedScanner?.name ?? "none",
+                availableScannerNames: scannerManager.availableScanners.compactMap(\.name).sorted(),
+                queueCount: scanQueue.count,
+                scannedFilesCount: scannedFiles.count,
+                currentPreset: currentPreset.name,
+                settings: settingsSnapshot
+            )
+
+            let summaryData = try JSONEncoder.prettyPrinted.encode(summary)
+            try summaryData.write(to: bundleURL.appendingPathComponent("summary.json"), options: [.atomic])
+
+            let presetsData = try JSONEncoder.prettyPrinted.encode(presets)
+            try presetsData.write(to: bundleURL.appendingPathComponent("presets.json"), options: [.atomic])
+
+            let queueData = try JSONEncoder.prettyPrinted.encode(scanQueue)
+            try queueData.write(to: bundleURL.appendingPathComponent("queue.json"), options: [.atomic])
+
+            var notes = "ScanFlow Diagnostics\n"
+            notes += "Generated: \(Date())\n"
+            notes += "Temporary Scan Folder: \(scannerManager.temporaryScanDirectoryURL.path)\n"
+            notes += "Pairing Enabled: \(remoteScanRequirePairingToken)\n"
+            try notes.data(using: .utf8)?.write(to: bundleURL.appendingPathComponent("notes.txt"), options: [.atomic])
+
+            NSWorkspace.shared.activateFileViewerSelecting([bundleURL])
+        } catch {
+            showAlert(message: "Failed to export diagnostics: \(error.localizedDescription)")
+        }
+    }
+    #endif
+
+    func resetSettingsToDefaults() {
+        _settings.resetToDefaults()
+        ensureRemotePairingToken()
+        applyRuntimeScannerSettings()
+        #if os(macOS)
+        if keepConnectedInBackground {
+            scannerManager.startBrowsing()
+        } else {
+            scannerManager.stopBrowsing()
+        }
+        if remoteScanServerEnabled {
+            remoteScanServer.start()
+        } else {
+            remoteScanServer.stop()
+        }
+        updateLoginItemRegistration(enabled: startAtLogin)
+        NotificationCenter.default.post(name: .scanflowMenuBarSettingChanged, object: nil)
+        #endif
+    }
+
+    #if os(macOS)
+    func generateRemotePairingToken() {
+        remoteScanPairingToken = Self.generatePairingToken()
+    }
+
+    func copyRemotePairingTokenToClipboard() {
+        let token = remoteScanPairingToken
+        guard !token.isEmpty else {
+            showAlert(message: "Pairing token is empty")
+            return
+        }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(token, forType: .string)
+    }
+    #endif
+
+    private func isRemoteScanAuthorized(_ request: RemoteScanRequest) -> Bool {
+        guard remoteScanRequirePairingToken else {
+            return true
+        }
+        let expected = remoteScanPairingToken.trimmingCharacters(in: .whitespacesAndNewlines)
+        let provided = request.pairingToken?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !expected.isEmpty else {
+            return false
+        }
+        return expected == provided
+    }
+
+    private static func generatePairingToken() -> String {
+        let alphabet = Array("ABCDEFGHJKLMNPQRSTUVWXYZ23456789")
+        var token = ""
+        for index in 0..<16 {
+            if index == 4 || index == 8 || index == 12 {
+                token.append("-")
+            }
+            token.append(alphabet.randomElement() ?? "A")
+        }
+        return token
+    }
+
+    func enterBackgroundMode() {
         #if os(macOS)
         isBackgroundModeEnabled = true
         if keepConnectedInBackground {
@@ -780,7 +1310,7 @@ public class AppState {
         #endif
     }
 
-    public func exitBackgroundMode() {
+    func exitBackgroundMode() {
         #if os(macOS)
         isBackgroundModeEnabled = false
         NSApp.setActivationPolicy(.regular)
@@ -789,7 +1319,7 @@ public class AppState {
     }
 
     #if os(macOS)
-    public func updateLoginItemRegistration(enabled: Bool) {
+    func updateLoginItemRegistration(enabled: Bool) {
         guard #available(macOS 13.0, *) else { return }
         do {
             let service = SMAppService.mainApp
@@ -803,7 +1333,7 @@ public class AppState {
         }
     }
 
-    public func handleKeepConnectedToggle(_ enabled: Bool) {
+    func handleKeepConnectedToggle(_ enabled: Bool) {
         if enabled && !startAtLogin {
             startAtLogin = true
         }
@@ -818,12 +1348,12 @@ public class AppState {
         )
     }
 
-    public func handleStartAtLoginToggle(_ enabled: Bool) {
+    func handleStartAtLoginToggle(_ enabled: Bool) {
         startAtLogin = enabled
         updateLoginItemRegistration(enabled: enabled)
     }
 
-    public func handleRemoteScanServerToggle(_ enabled: Bool) {
+    func handleRemoteScanServerToggle(_ enabled: Bool) {
         remoteScanServerEnabled = enabled
         if enabled {
             remoteScanServer.start()
@@ -832,11 +1362,11 @@ public class AppState {
         }
     }
 
-    public func isAutoStartEnabled(for scanner: ICScannerDevice) -> Bool {
+    func isAutoStartEnabled(for scanner: ICScannerDevice) -> Bool {
         autoStartScannerIDs.contains(scanner.scanflowIdentifier)
     }
 
-    public func setAutoStartEnabled(_ enabled: Bool, for scanner: ICScannerDevice) {
+    func setAutoStartEnabled(_ enabled: Bool, for scanner: ICScannerDevice) {
         var updated = autoStartScannerIDs
         let identifier = scanner.scanflowIdentifier
         if enabled {
@@ -858,7 +1388,7 @@ public class AppState {
     }
     #endif
 
-    #if os(macOS)
+#if os(macOS)
     private func handleScannerReadyForAutoScan(device: ICDevice?) {
         guard keepConnectedInBackground, autoStartScanWhenReady else { return }
         guard !isScanning else { return }
@@ -879,4 +1409,13 @@ public class AppState {
         }
     }
     #endif
+}
+
+private extension JSONEncoder {
+    static var prettyPrinted: JSONEncoder {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.dateEncodingStrategy = .iso8601
+        return encoder
+    }
 }

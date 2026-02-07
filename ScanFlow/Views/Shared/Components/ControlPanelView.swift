@@ -140,7 +140,7 @@ struct ControlPanelView: View {
                     Toggle("Unique date tag per file", isOn: $appState.currentPreset.uniqueDateTag)
                     Toggle("Edit each filename", isOn: $appState.currentPreset.editEachFilename)
                 }
-                .toggleStyle(.checkbox)
+                .platformCheckboxToggleStyle()
                 .controlSize(.small)
                 .padding(.top, 4)
             }
@@ -166,7 +166,7 @@ struct ControlPanelView: View {
 
                 if appState.currentPreset.format == .pdf || appState.currentPreset.format == .compressedPDF {
                     Toggle("Searchable PDF (OCR)", isOn: $appState.currentPreset.searchablePDF)
-                        .toggleStyle(.checkbox)
+                        .platformCheckboxToggleStyle()
                         .controlSize(.small)
                         .padding(.top, 4)
                 }
@@ -174,7 +174,7 @@ struct ControlPanelView: View {
                 // Split on page option
                 HStack {
                     Toggle("Split on page", isOn: $appState.currentPreset.splitOnPage)
-                        .toggleStyle(.checkbox)
+                        .platformCheckboxToggleStyle()
                     if appState.currentPreset.splitOnPage {
                         Stepper(value: $appState.currentPreset.splitPageNumber, in: 1...100) {
                             Text("\(appState.currentPreset.splitPageNumber)")
@@ -239,13 +239,13 @@ struct ControlPanelView: View {
 
                 // Print options would go here but require printer integration
             }
-            .toggleStyle(.checkbox)
+            .platformCheckboxToggleStyle()
             .controlSize(.small)
         }
     }
 
-    #if os(macOS)
     private func chooseApp() {
+        #if os(macOS)
         let panel = NSOpenPanel()
         panel.canChooseDirectories = false
         panel.canChooseFiles = true
@@ -257,8 +257,8 @@ struct ControlPanelView: View {
         if panel.runModal() == .OK, let url = panel.url {
             appState.currentPreset.openWithAppPath = url.path
         }
+        #endif
     }
-    #endif
 
     // MARK: - Basic Settings Tab
 
@@ -345,7 +345,7 @@ struct ControlPanelView: View {
 
                 // Custom scan area
                 Toggle("Custom scan area", isOn: $appState.currentPreset.useCustomScanArea)
-                    .toggleStyle(.checkbox)
+                    .platformCheckboxToggleStyle()
                     .controlSize(.small)
                     .padding(.top, 4)
 
@@ -462,7 +462,7 @@ struct ControlPanelView: View {
                     }
 
                     Toggle("Reverse feeder page order", isOn: $appState.currentPreset.reverseFeederPageOrder)
-                        .toggleStyle(.checkbox)
+                        .platformCheckboxToggleStyle()
                         .controlSize(.small)
                         .padding(.top, 4)
                 }
@@ -644,8 +644,8 @@ struct ControlPanelView: View {
         }
     }
 
-    #if os(macOS)
     private func chooseFolder() {
+        #if os(macOS)
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
@@ -655,8 +655,8 @@ struct ControlPanelView: View {
         if panel.runModal() == .OK, let url = panel.url {
             appState.currentPreset.destination = url.path
         }
+        #endif
     }
-    #endif
 }
 
 // MARK: - Helper Views
@@ -681,7 +681,7 @@ struct SettingsSection<Content: View>: View {
 extension View {
     @ViewBuilder
     func settingsFieldStyle() -> some View {
-        if #available(macOS 26.0, *) {
+        if #available(iOS 26.0, macOS 26.0, *) {
             self
                 .padding(.horizontal, 10)
                 .padding(.vertical, 8)
@@ -690,8 +690,7 @@ extension View {
             self
                 .padding(.horizontal, 10)
                 .padding(.vertical, 8)
-                .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 6))
+                .background(Color.platformControlBackground, in: RoundedRectangle(cornerRadius: 6))
         }
     }
 }
-

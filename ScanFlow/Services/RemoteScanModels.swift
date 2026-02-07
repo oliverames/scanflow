@@ -7,7 +7,7 @@
 
 import Foundation
 
-public enum RemoteScanMessageType: String, Codable {
+enum RemoteScanMessageType: String, Codable {
     case hello
     case scanRequest
     case scanResult
@@ -15,29 +15,36 @@ public enum RemoteScanMessageType: String, Codable {
     case error
 }
 
-public struct RemoteScanRequest: Codable {
-    public let presetName: String?
-    public let searchablePDF: Bool
-    public let forceSingleDocument: Bool
+struct RemoteScanRequest: Codable {
+    let presetName: String?
+    let searchablePDF: Bool
+    let forceSingleDocument: Bool
+    let pairingToken: String?
 
-    public init(presetName: String?, searchablePDF: Bool, forceSingleDocument: Bool) {
+    init(
+        presetName: String?,
+        searchablePDF: Bool,
+        forceSingleDocument: Bool,
+        pairingToken: String? = nil
+    ) {
         self.presetName = presetName
         self.searchablePDF = searchablePDF
         self.forceSingleDocument = forceSingleDocument
+        self.pairingToken = pairingToken
     }
 }
 
-public struct RemoteScanDocument: Codable {
-    public let filename: String
-    public let pdfDataBase64: String
-    public let pageCount: Int
-    public let byteCount: Int
+struct RemoteScanDocument: Codable {
+    let filename: String
+    let pdfDataBase64: String
+    let pageCount: Int
+    let byteCount: Int
 }
 
-public struct RemoteScanResult: Codable {
-    public let documents: [RemoteScanDocument]
-    public let totalBytes: Int
-    public let scannedAt: Date
+struct RemoteScanResult: Codable {
+    let documents: [RemoteScanDocument]
+    let totalBytes: Int
+    let scannedAt: Date
 }
 
 struct RemoteScanStatus: Codable {

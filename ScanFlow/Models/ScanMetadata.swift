@@ -7,16 +7,16 @@
 
 import Foundation
 
-public struct ScanMetadata: Codable {
-    public let resolution: Int
-    public let colorSpace: String
-    public let timestamp: Date
-    public let scannerModel: String
-    public let width: Int?
-    public let height: Int?
-    public let bitDepth: Int?
+struct ScanMetadata: Codable {
+    let resolution: Int
+    let colorSpace: String
+    let timestamp: Date
+    let scannerModel: String
+    let width: Int?
+    let height: Int?
+    let bitDepth: Int?
 
-    public init(
+    init(
         resolution: Int,
         colorSpace: String = "sRGB",
         timestamp: Date = Date(),

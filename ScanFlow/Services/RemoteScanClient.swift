@@ -10,7 +10,7 @@ import Network
 
 @MainActor
 @Observable
-public final class RemoteScanClient {
+final class RemoteScanClient {
     enum ConnectionState: String {
         case disconnected
         case connecting
@@ -24,7 +24,7 @@ public final class RemoteScanClient {
         let endpoint: NWEndpoint
     }
 
-    public init() {}
+    init() {}
 
     private let queue = DispatchQueue(label: "com.scanflow.remotescan.client")
     private var browser: NWBrowser?
@@ -96,7 +96,12 @@ public final class RemoteScanClient {
         expectedBytes = nil
     }
 
-    func requestScan(presetName: String?, searchablePDF: Bool, forceSingleDocument: Bool) {
+    func requestScan(
+        presetName: String?,
+        searchablePDF: Bool,
+        forceSingleDocument: Bool,
+        pairingToken: String?
+    ) {
         guard connectionState == .connected else { return }
         isScanning = true
         bytesReceived = 0
@@ -106,7 +111,8 @@ public final class RemoteScanClient {
         let request = RemoteScanRequest(
             presetName: presetName,
             searchablePDF: searchablePDF,
-            forceSingleDocument: forceSingleDocument
+            forceSingleDocument: forceSingleDocument,
+            pairingToken: pairingToken
         )
         send(.request(request))
     }

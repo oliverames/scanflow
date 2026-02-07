@@ -1,3 +1,4 @@
+#if DEBUG
 import SwiftUI
 @testable import ScanFlow
 
@@ -36,3 +37,4 @@ import SwiftUI
     .frame(width: 400, height: 500)
     .padding()
 }
+#endif

@@ -14,7 +14,12 @@ struct RemoteScanCodecTests {
     @Test("Encodes and decodes a scan request with split flag")
     func encodeDecodeRequest() throws {
         var codec = RemoteScanCodec()
-        let request = RemoteScanRequest(presetName: "Searchable PDF", searchablePDF: true, forceSingleDocument: true)
+        let request = RemoteScanRequest(
+            presetName: "Searchable PDF",
+            searchablePDF: true,
+            forceSingleDocument: true,
+            pairingToken: "TOKEN-1234"
+        )
         let message = RemoteScanMessage.request(request)
 
         let data = try codec.encode(message)
@@ -23,6 +28,7 @@ struct RemoteScanCodecTests {
 
         #expect(decoded.count == 1)
         #expect(decoded.first?.request?.forceSingleDocument == true)
+        #expect(decoded.first?.request?.pairingToken == "TOKEN-1234")
     }
 
     @Test("Encodes and decodes a scan result")

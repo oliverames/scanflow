@@ -330,8 +330,10 @@ These settings directly configure the scanner hardware via Apple's ImageCaptureC
 
 ```
 ScanFlow/
-├── ScanFlow/
+├── App/
 │   ├── ScanFlowApp.swift              # App entry point
+│   └── Previews/                      # Xcode-hosted SwiftUI previews
+├── ScanFlow/
 │   ├── AppLifecycleDelegate.swift     # Background mode, menu bar, lifecycle
 │   ├── ScanFlow.entitlements          # App sandbox and permissions
 │   ├── Models/
@@ -429,11 +431,11 @@ ScanFlow includes comprehensive automated tests using Swift Testing framework.
 ### Running Tests
 
 ```bash
-# Using Xcode
-# Cmd+U to run all tests
+# Swift Package tests (recommended)
+swift test
 
-# Using xcodebuild
-xcodebuild test -scheme ScanFlow -destination 'platform=macOS'
+# Include coverage artifacts
+swift test --enable-code-coverage
 ```
 
 ### Test Coverage
@@ -471,7 +473,7 @@ xcodebuild test -scheme ScanFlow -destination 'platform=macOS'
 | SettingsUITests | 5 | Settings panel states |
 | StructuredDataExtractorTests | 2 | Data extraction |
 
-**Total: 138 tests**
+**Total: 150+ tests** (run `swift test` for the current exact count)
 
 ### Mock Scanner
 

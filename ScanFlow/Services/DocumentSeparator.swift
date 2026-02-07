@@ -10,36 +10,38 @@ import Foundation
 #if os(macOS)
 import AppKit
 import Vision
+#endif
 
 /// Settings for document separation
-public struct SeparationSettings: Codable, Equatable {
-    public var enabled: Bool = false
+struct SeparationSettings: Codable, Equatable {
+    var enabled: Bool = false
 
     // Blank page detection
-    public var useBlankPages: Bool = true
-    public var blankSensitivity: Double = 0.5  // 0-1, higher = more sensitive
-    public var deleteBlankPages: Bool = true
+    var useBlankPages: Bool = true
+    var blankSensitivity: Double = 0.5  // 0-1, higher = more sensitive
+    var deleteBlankPages: Bool = true
 
     // Barcode-based separation
-    public var useBarcodes: Bool = false
-    public var barcodePattern: String = ".*"  // Regex pattern to match separator barcodes
+    var useBarcodes: Bool = false
+    var barcodePattern: String = ".*"  // Regex pattern to match separator barcodes
 
     // Content analysis
-    public var useContentAnalysis: Bool = false
-    public var similarityThreshold: Double = 0.3  // 0-1, lower = more likely to split
+    var useContentAnalysis: Bool = false
+    var similarityThreshold: Double = 0.3  // 0-1, lower = more likely to split
 
     // Constraints
-    public var minimumPagesPerDocument: Int = 1
+    var minimumPagesPerDocument: Int = 1
 
     // Advanced option
-    public var allowManualAdjustment: Bool = false
+    var allowManualAdjustment: Bool = false
 
-    public static let `default` = SeparationSettings()
+    static let `default` = SeparationSettings()
 
-    public init() {}
+    init() {}
 }
 
 /// Document separator for intelligently splitting batch scans
+#if os(macOS)
 @MainActor
 class DocumentSeparator {
     private let imageProcessor: ImageProcessor

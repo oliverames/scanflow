@@ -1,3 +1,4 @@
+#if DEBUG
 import SwiftUI
 @testable import ScanFlow
 
@@ -36,4 +37,5 @@ import SwiftUI
         .environment(AppState())
         .padding()
 }
+#endif
 #endif

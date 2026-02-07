@@ -42,7 +42,7 @@ struct DocumentSeparationSettingsView: View {
             
             // Blank page detection
             Toggle("Split on blank pages", isOn: $settings.useBlankPages)
-                .toggleStyle(.checkbox)
+                .platformCheckboxToggleStyle()
             
             if settings.useBlankPages {
                 VStack(alignment: .leading, spacing: 4) {
@@ -57,14 +57,14 @@ struct DocumentSeparationSettingsView: View {
                     .padding(.leading, 20)
                     
                     Toggle("Delete blank separator pages", isOn: $settings.deleteBlankPages)
-                        .toggleStyle(.checkbox)
+                        .platformCheckboxToggleStyle()
                         .padding(.leading, 20)
                 }
             }
             
             // Barcode-based separation
             Toggle("Split on barcode markers", isOn: $settings.useBarcodes)
-                .toggleStyle(.checkbox)
+                .platformCheckboxToggleStyle()
             
             if settings.useBarcodes {
                 VStack(alignment: .leading, spacing: 4) {
@@ -85,7 +85,7 @@ struct DocumentSeparationSettingsView: View {
             
             // Content analysis (advanced)
             Toggle("Analyze content changes", isOn: $settings.useContentAnalysis)
-                .toggleStyle(.checkbox)
+                .platformCheckboxToggleStyle()
             
             if settings.useContentAnalysis {
                 VStack(alignment: .leading, spacing: 4) {
@@ -130,7 +130,7 @@ struct DocumentSeparationSettingsView: View {
             
             // Manual adjustment option (advanced)
             Toggle("Allow manual boundary adjustment", isOn: $settings.allowManualAdjustment)
-                .toggleStyle(.checkbox)
+                .platformCheckboxToggleStyle()
             
             if settings.allowManualAdjustment {
                 Text("Shows a review screen before saving separated documents")

@@ -13,38 +13,39 @@ import AppKit
 #if canImport(FoundationModels)
 import FoundationModels
 #endif
+#endif
 
 /// Settings for AI-assisted file naming
-public struct NamingSettings: Codable, Equatable {
-    public var enabled: Bool = false
+struct NamingSettings: Codable, Equatable {
+    var enabled: Bool = false
 
     // Standard Mode Options
-    public var useDatePrefix: Bool = true
-    public var dateSource: DateSource = .documentContent
-    public var includeDocumentType: Bool = true
-    public var includeKeyEntities: Bool = true
-    public var maxLength: Int = 60
+    var useDatePrefix: Bool = true
+    var dateSource: DateSource = .documentContent
+    var includeDocumentType: Bool = true
+    var includeKeyEntities: Bool = true
+    var maxLength: Int = 60
 
     // Advanced Mode
-    public var useAdvancedMode: Bool = false
-    public var customPrompt: String = Self.defaultPrompt
+    var useAdvancedMode: Bool = false
+    var customPrompt: String = Self.defaultPrompt
 
     // Fallback Behavior (user preference)
-    public var fallbackBehavior: FallbackBehavior = .promptManual
+    var fallbackBehavior: FallbackBehavior = .promptManual
 
-    public enum DateSource: String, Codable, CaseIterable {
+    enum DateSource: String, Codable, CaseIterable {
         case documentContent = "From Document"
         case scanDate = "Scan Date"
         case none = "No Date"
     }
     
-    public enum FallbackBehavior: String, Codable, CaseIterable {
+    enum FallbackBehavior: String, Codable, CaseIterable {
         case promptManual = "Prompt for manual entry"
         case notifyAndFallback = "Notify and use date-based"
         case silentFallback = "Silent fallback to date-based"
     }
     
-    public static let defaultPrompt = """
+    static let defaultPrompt = """
         Generate a filename for this scanned document following these rules:
 
         NAMING CONVENTIONS:
@@ -78,9 +79,9 @@ public struct NamingSettings: Codable, Equatable {
         - "media release copy"
         """
     
-    public static let `default` = NamingSettings()
+    static let `default` = NamingSettings()
 
-    public init() {}
+    init() {}
 }
 
 /// Response structure for AI-generated filename
@@ -100,6 +101,16 @@ struct FilenameResponse {
     }
 }
 
+#if !os(macOS)
+@MainActor
+class AIFileNamer {
+    static func isAvailable() async -> Bool {
+        false
+    }
+}
+#endif
+
+#if os(macOS)
 #if canImport(FoundationModels)
 /// Generable version for FoundationModels (macOS 26+)
 @available(macOS 26.0, *)

@@ -73,7 +73,7 @@ struct AIRenamingSettingsView: View {
         VStack(alignment: .leading, spacing: 10) {
             // Date options
             Toggle("Include date prefix when relevant", isOn: $settings.useDatePrefix)
-                .toggleStyle(.checkbox)
+                .platformCheckboxToggleStyle()
             
             if settings.useDatePrefix {
                 Picker("Date source:", selection: $settings.dateSource) {
@@ -85,10 +85,10 @@ struct AIRenamingSettingsView: View {
             }
             
             Toggle("Identify document type", isOn: $settings.includeDocumentType)
-                .toggleStyle(.checkbox)
+                .platformCheckboxToggleStyle()
             
             Toggle("Include key entities (names, companies)", isOn: $settings.includeKeyEntities)
-                .toggleStyle(.checkbox)
+                .platformCheckboxToggleStyle()
             
             // Max length slider
             HStack {
@@ -175,12 +175,12 @@ struct AIRenamingSettingsView: View {
 
 private struct GlassTextEditorStyle: ViewModifier {
     func body(content: Content) -> some View {
-        if #available(macOS 26.0, *) {
+        if #available(iOS 26.0, macOS 26.0, *) {
             content
                 .glassEffect(.regular, in: .rect(cornerRadius: 6))
         } else {
             content
-                .background(Color(nsColor: .textBackgroundColor))
+                .background(Color.platformTextBackground)
                 .clipShape(RoundedRectangle(cornerRadius: 6))
                 .overlay(
                     RoundedRectangle(cornerRadius: 6)

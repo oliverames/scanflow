@@ -14,13 +14,14 @@ import PDFKit
 
 #if os(macOS)
 @MainActor
-public final class RemoteScanServer {
-    public enum ServerError: LocalizedError {
+final class RemoteScanServer {
+    enum ServerError: LocalizedError {
         case alreadyRunning
         case serverUnavailable
         case busy
+        case unauthorized
 
-        public var errorDescription: String? {
+        var errorDescription: String? {
             switch self {
             case .alreadyRunning:
                 return "Remote scan server is already running"
@@ -28,20 +29,27 @@ public final class RemoteScanServer {
                 return "Remote scan server is unavailable"
             case .busy:
                 return "Scanner is currently busy"
+            case .unauthorized:
+                return "Scan request rejected: invalid pairing token"
             }
         }
     }
 
     private let queue = DispatchQueue(label: "com.scanflow.remotescan.server")
     private let scanHandler: (RemoteScanRequest) async throws -> RemoteScanResult
+    private let authorizeRequest: (RemoteScanRequest) -> Bool
     private var listener: NWListener?
     private var activeConnections: [RemoteScanSession] = []
 
     private(set) var isRunning: Bool = false
     private(set) var lastError: String?
 
-    public init(scanHandler: @escaping (RemoteScanRequest) async throws -> RemoteScanResult) {
+    init(
+        scanHandler: @escaping (RemoteScanRequest) async throws -> RemoteScanResult,
+        authorizeRequest: @escaping (RemoteScanRequest) -> Bool = { _ in true }
+    ) {
         self.scanHandler = scanHandler
+        self.authorizeRequest = authorizeRequest
     }
 
     func start() {
@@ -89,7 +97,11 @@ public final class RemoteScanServer {
     }
 
     private func handleNewConnection(_ connection: NWConnection) {
-        let session = RemoteScanSession(connection: connection, scanHandler: scanHandler)
+        let session = RemoteScanSession(
+            connection: connection,
+            scanHandler: scanHandler,
+            authorizeRequest: authorizeRequest
+        )
         activeConnections.append(session)
         session.onClose = { [weak self] session in
             self?.activeConnections.removeAll { $0 === session }
@@ -107,12 +119,18 @@ private final class RemoteScanSession {
     private var buffer = Data()
     private var codec = RemoteScanCodec()
     private let scanHandler: (RemoteScanRequest) async throws -> RemoteScanResult
+    private let authorizeRequest: (RemoteScanRequest) -> Bool
 
     var onClose: ((RemoteScanSession) -> Void)?
 
-    init(connection: NWConnection, scanHandler: @escaping (RemoteScanRequest) async throws -> RemoteScanResult) {
+    init(
+        connection: NWConnection,
+        scanHandler: @escaping (RemoteScanRequest) async throws -> RemoteScanResult,
+        authorizeRequest: @escaping (RemoteScanRequest) -> Bool
+    ) {
         self.connection = connection
         self.scanHandler = scanHandler
+        self.authorizeRequest = authorizeRequest
     }
 
     func start(queue: DispatchQueue) {
@@ -169,6 +187,10 @@ private final class RemoteScanSession {
 
     @MainActor
     private func handleScanRequest(_ request: RemoteScanRequest) async {
+        guard authorizeRequest(request) else {
+            send(.error(RemoteScanServer.ServerError.unauthorized.localizedDescription))
+            return
+        }
         send(.status("Starting scan"))
         do {
             let result = try await scanHandler(request)

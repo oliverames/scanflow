@@ -31,6 +31,13 @@ final class SettingsStore: ObservableObject {
     @AppStorage("autoStartScanWhenReady") var autoStartScanWhenReady: Bool = false
     @AppStorage("startAtLogin") var startAtLogin: Bool = false
     @AppStorage("remoteScanServerEnabled") var remoteScanServerEnabled: Bool = true
+    @AppStorage("remoteScanRequirePairingToken") var remoteScanRequirePairingToken: Bool = true
+    @AppStorage("remoteScanPairingToken") var remoteScanPairingToken: String = ""
+    @AppStorage("remoteScanClientPairingToken") var remoteScanClientPairingToken: String = ""
+    @AppStorage("scannerDiscoveryTimeoutSeconds") var scannerDiscoveryTimeoutSeconds: Int = 3
+    @AppStorage("scanTimeoutSeconds") var scanTimeoutSeconds: Int = 300
+    @AppStorage("preserveTemporaryScanFiles") var preserveTemporaryScanFiles: Bool = false
+    @AppStorage("maxBufferedPages") var maxBufferedPages: Int = 200
     
     // MARK: - Complex Settings (Codable)
     
@@ -116,7 +123,14 @@ final class SettingsStore: ObservableObject {
         autoStartScanWhenReady = false
         startAtLogin = false
         remoteScanServerEnabled = true
+        remoteScanRequirePairingToken = true
+        remoteScanPairingToken = ""
+        remoteScanClientPairingToken = ""
         menuBarAlwaysEnabled = false
+        scannerDiscoveryTimeoutSeconds = 3
+        scanTimeoutSeconds = 300
+        preserveTemporaryScanFiles = false
+        maxBufferedPages = 200
         
         UserDefaults.standard.removeObject(forKey: Self.namingSettingsKey)
         UserDefaults.standard.removeObject(forKey: Self.separationSettingsKey)

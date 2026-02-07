@@ -13,6 +13,7 @@ private let logger = Logger(subsystem: "com.scanflow.app", category: "MainWindow
 
 public struct MainWindow: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     public init() {}
 
@@ -79,13 +80,21 @@ public struct MainWindow: View {
 
                 // Toggle scan settings panel
                 Button {
-                    withAnimation(.easeInOut(duration: 0.2)) {
+                    let toggle = {
                         appState.showScanSettings.toggle()
+                    }
+                    if reduceMotion {
+                        toggle()
+                    } else {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            toggle()
+                        }
                     }
                 } label: {
                     Image(systemName: "sidebar.right")
                 }
                 .help("Toggle Scan Settings")
+                .accessibilityLabel("Toggle Scan Settings Panel")
 
                 // Change Scanner button - shows the scanner selection sheet
                 Button {
@@ -95,6 +104,8 @@ public struct MainWindow: View {
                     Label("Change Scanner", systemImage: "scanner")
                 }
                 .help("Change Scanner")
+                .accessibilityLabel("Change Scanner")
+                .accessibilityHint("Opens scanner selection")
 
                 Menu {
                     ForEach(appState.presets) { preset in
@@ -146,6 +157,7 @@ public struct MainWindow: View {
                 .buttonStyle(.borderedProminent)
                 .disabled(!appState.scannerManager.connectionState.isConnected && !appState.useMockScanner)
                 .help("Start Scan (⌘R)")
+                .accessibilityLabel(appState.isScanning ? "Cancel Scan" : "Start Scan")
             }
         }
     }

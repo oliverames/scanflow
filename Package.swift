@@ -25,7 +25,9 @@ let package = Package(
                 .product(name: "Sparkle", package: "Sparkle", condition: .when(platforms: [.macOS]))
             ],
             path: "ScanFlow",
-            exclude: ["ScanFlowApp.swift"],
+            exclude: [
+                "Resources/Info-iOS.plist",
+            ],
             resources: [
                 .process("Resources/Info-macOS.plist"),
                 .process("ScanFlow.entitlements")

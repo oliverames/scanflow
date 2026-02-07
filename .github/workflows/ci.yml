@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - codex/**
+  pull_request:
+
+jobs:
+  package-build-and-test:
+    runs-on: macos-14
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Swift build
+        run: swift build
+
+      - name: Swift test (with coverage)
+        run: swift test --enable-code-coverage
+
+      - name: Generate coverage summary
+        run: |
+          profile="$(find .build -name default.profdata | head -n 1)"
+          binary="$(find .build -path '*ScanFlowPackageTests.xctest/Contents/MacOS/ScanFlowPackageTests' | head -n 1)"
+          if [[ -z "${profile}" || -z "${binary}" ]]; then
+            echo "Coverage artifacts not found"
+            exit 1
+          fi
+          xcrun llvm-cov report "${binary}" -instr-profile="${profile}" > coverage-report.txt
+          cat coverage-report.txt
+
+      - name: Upload coverage summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: swift-coverage-report
+          path: coverage-report.txt
+
+      - name: Build package scheme (macOS Debug)
+        run: xcodebuild -project ScanFlow.xcodeproj -scheme ScanFlow -configuration Debug -destination 'platform=macOS,arch=arm64' build CODE_SIGNING_ALLOWED=NO
+
+      - name: Build package scheme (macOS Release)
+        run: xcodebuild -project ScanFlow.xcodeproj -scheme ScanFlow -configuration Release -destination 'platform=macOS,arch=arm64' build CODE_SIGNING_ALLOWED=NO
+
+      - name: Build package scheme (iOS Simulator Debug)
+        run: xcodebuild -project ScanFlow.xcodeproj -scheme ScanFlow -configuration Debug -destination 'generic/platform=iOS Simulator' build CODE_SIGNING_ALLOWED=NO
+
+      - name: Build package scheme (iOS Simulator Release)
+        run: xcodebuild -project ScanFlow.xcodeproj -scheme ScanFlow -configuration Release -destination 'generic/platform=iOS Simulator' build CODE_SIGNING_ALLOWED=NO
+
+  app-build-matrix:
+    runs-on: macos-14
+    needs: package-build-and-test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform_label: macOS
+            configuration: Debug
+            destination: "platform=macOS,arch=arm64"
+          - platform_label: macOS
+            configuration: Release
+            destination: "platform=macOS,arch=arm64"
+          - platform_label: iOS Simulator
+            configuration: Debug
+            destination: "generic/platform=iOS Simulator"
+          - platform_label: iOS Simulator
+            configuration: Release
+            destination: "generic/platform=iOS Simulator"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Build ScanFlow App (${{ matrix.platform_label }} ${{ matrix.configuration }})
+        run: |
+          xcodebuild \
+            -project ScanFlow.xcodeproj \
+            -scheme "ScanFlow App" \
+            -configuration "${{ matrix.configuration }}" \
+            -destination "${{ matrix.destination }}" \
+            build CODE_SIGNING_ALLOWED=NO

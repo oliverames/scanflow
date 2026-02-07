@@ -129,8 +129,8 @@ public final class AppLifecycleDelegate: NSObject, NSApplicationDelegate {
 }
 
 extension Notification.Name {
-    public static let scanflowKeepConnectedChanged = Notification.Name("scanflow.keepConnectedChanged")
-    public static let scanflowMenuBarSettingChanged = Notification.Name("scanflow.menuBarSettingChanged")
+    static let scanflowKeepConnectedChanged = Notification.Name("scanflow.keepConnectedChanged")
+    static let scanflowMenuBarSettingChanged = Notification.Name("scanflow.menuBarSettingChanged")
 }
 
 @MainActor

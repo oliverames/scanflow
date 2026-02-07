@@ -1,3 +1,4 @@
+#if DEBUG
 import SwiftUI
 @testable import ScanFlow
 
@@ -24,4 +25,5 @@ import SwiftUI
         .environment(AppState())
         .frame(width: 600, height: 500)
 }
+#endif
 #endif

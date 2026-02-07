@@ -2,27 +2,21 @@
 //  TWAINBridge.swift
 //  ScanFlow
 //
-//  ⚠️ BETA FEATURE - TWAIN protocol bridge for professional document scanners
-//  Foundation/wrapper for native TWAIN integration (Epson Scan 2 driver)
-//
-//  STATUS: BETA - Not yet fully implemented. Falls back to ImageCaptureCore.
-//  NOTE: Full TWAIN support requires native C++ bridge or third-party SDK
-//  This file provides the Swift interface and falls back to ImageCaptureCore
+//  TWAIN-oriented interface with ImageCaptureCore fallback.
 //
 
 import Foundation
 #if os(macOS)
 import AppKit
+@preconcurrency import ImageCaptureCore
 #endif
 
 #if os(macOS)
 
-/// TWAIN protocol bridge manager
 @MainActor
-class TWAINBridge {
+final class TWAINBridge {
 
-    /// TWAIN scanner capabilities
-    struct TWAINCapabilities: Codable {
+    struct TWAINCapabilities: Codable, Equatable {
         var supportsDuplex: Bool = false
         var supportsADF: Bool = false
         var supportsFlatbed: Bool = true
@@ -34,8 +28,7 @@ class TWAINBridge {
         var manufacturer: String = "Unknown"
     }
 
-    /// TWAIN scan settings
-    struct TWAINSettings {
+    struct TWAINSettings: Codable, Equatable {
         var resolution: Int = 300
         var colorMode: ColorMode = .color
         var paperSize: PaperSize = .letter
@@ -45,20 +38,21 @@ class TWAINBridge {
         var brightness: Double = 0.0  // -100 to 100
         var contrast: Double = 0.0    // -100 to 100
         var threshold: Int = 128      // For B&W, 0-255
+        var exposure: Double = 0.0    // -100 to 100
 
-        enum ColorMode: String, Codable {
+        enum ColorMode: String, Codable, CaseIterable {
             case color = "Color"
             case grayscale = "Grayscale"
             case blackWhite = "BlackWhite"
         }
 
-        enum Source: String, Codable {
+        enum Source: String, Codable, CaseIterable {
             case flatbed = "Flatbed"
             case adf = "ADF"
             case auto = "Auto"
         }
 
-        enum PaperSize: String, Codable {
+        enum PaperSize: String, Codable, CaseIterable {
             case letter = "Letter"
             case legal = "Legal"
             case a4 = "A4"
@@ -67,245 +61,376 @@ class TWAINBridge {
         }
     }
 
-    // MARK: - Properties
-
-    private var isNativeTWAINAvailable: Bool = false
+    private let scannerManager: ScannerManager
+    private(set) var isNativeTWAINAvailable: Bool = false
     private var currentCapabilities: TWAINCapabilities?
+    private var connectedScannerName: String?
+    private var activeSettings = TWAINSettings()
+    private var capabilityOverride: TWAINCapabilities?
 
-    // MARK: - Initialization
-
-    init() {
-        // Check if native TWAIN library is available
+    init(scannerManager: ScannerManager) {
+        self.scannerManager = scannerManager
         checkTWAINAvailability()
     }
 
-    // MARK: - TWAIN Availability
-
-    /// Check if native TWAIN driver is available
-    private func checkTWAINAvailability() {
-        // Check for Epson Scan 2 or other TWAIN drivers
-        // This would call into native bridge when implemented
-        isNativeTWAINAvailable = false  // Default: not available
-
-        #if DEBUG
-        print("TWAINBridge: Native TWAIN not yet implemented, using ImageCaptureCore fallback")
-        #endif
+    convenience init() {
+        self.init(scannerManager: ScannerManager())
     }
 
-    /// Check if TWAIN is available
     var isTWAINAvailable: Bool {
-        return isNativeTWAINAvailable
+        isNativeTWAINAvailable || !scannerManager.availableScanners.isEmpty
     }
 
-    // MARK: - Scanner Discovery
+    var currentSettings: TWAINSettings {
+        activeSettings
+    }
 
-    /// Discover TWAIN scanners
+    var isConnected: Bool {
+        scannerManager.connectionState.isConnected && connectedScannerName != nil
+    }
+
     func discoverTWAINScanners() async throws -> [String] {
-        // This would call native TWAIN DSM_SelectSource
-        // For now, return empty array and fall back to ImageCaptureCore
-        guard isNativeTWAINAvailable else {
-            return []
-        }
-
-        // TODO: Call native TWAIN discovery
-        // return nativeTWAINDiscovery()
-        return []
+        checkTWAINAvailability()
+        await scannerManager.discoverScanners()
+        return scannerManager.availableScanners.compactMap(\.name).sorted()
     }
 
-    // MARK: - Scanner Connection
-
-    /// Connect to TWAIN scanner
     func connect(to scannerName: String) async throws -> TWAINCapabilities {
-        guard isNativeTWAINAvailable else {
-            throw TWAINError.nativeBridgeNotAvailable
+        if scannerManager.availableScanners.isEmpty {
+            _ = try await discoverTWAINScanners()
         }
 
-        // TODO: Call native TWAIN DSM_OpenDS
-        // let caps = try nativeTWAINConnect(scannerName)
-        // currentCapabilities = caps
-        // return caps
-
-        throw TWAINError.notImplemented
-    }
-
-    /// Disconnect from scanner
-    func disconnect() async {
-        guard isNativeTWAINAvailable else { return }
-
-        // TODO: Call native TWAIN DSM_CloseDS
-        currentCapabilities = nil
-    }
-
-    // MARK: - Scanning
-
-    /// Perform TWAIN scan
-    func scan(with settings: TWAINSettings) async throws -> [NSImage] {
-        guard isNativeTWAINAvailable else {
-            throw TWAINError.nativeBridgeNotAvailable
+        guard let scanner = locateScanner(named: scannerName) else {
+            throw TWAINError.scannerNotFound
         }
 
-        // TODO: Call native TWAIN scanning sequence:
-        // 1. DG_CONTROL/DAT_CAPABILITY/MSG_SET for each setting
-        // 2. DG_CONTROL/DAT_USERINTERFACE/MSG_ENABLEDS
-        // 3. DG_IMAGE/DAT_IMAGENATIVEXFER/MSG_GET
-        // 4. DG_CONTROL/DAT_USERINTERFACE/MSG_DISABLEDS
-        // 5. Return scanned images
-
-        throw TWAINError.notImplemented
-    }
-
-    /// Get scanner capabilities
-    func getCapabilities() async throws -> TWAINCapabilities {
-        guard let caps = currentCapabilities else {
-            throw TWAINError.notConnected
-        }
+        try await scannerManager.connect(to: scanner)
+        connectedScannerName = scanner.name
+        let caps = capabilities(for: scanner)
+        currentCapabilities = caps
+        activeSettings = normalizedDefaultSettings(for: caps)
         return caps
     }
 
-    // MARK: - Hardware Configuration
+    func disconnect() async {
+        await scannerManager.disconnect()
+        connectedScannerName = nil
+        currentCapabilities = nil
+        activeSettings = TWAINSettings()
+    }
 
-    /// Configure scanner brightness
+    func scan() async throws -> [NSImage] {
+        try await scan(with: activeSettings)
+    }
+
+    func scan(with settings: TWAINSettings) async throws -> [NSImage] {
+        guard scannerManager.connectionState.isConnected else {
+            throw TWAINError.notConnected
+        }
+
+        let normalized = try normalizedSettings(for: settings, allowDisconnectedFallback: false)
+        activeSettings = normalized
+        let preset = twainPreset(for: normalized)
+        let result = try await scannerManager.scan(with: preset)
+        return result.images
+    }
+
+    func getCapabilities() async throws -> TWAINCapabilities {
+        guard scannerManager.connectionState.isConnected else {
+            throw TWAINError.notConnected
+        }
+
+        if let scanner = scannerManager.selectedScanner {
+            currentCapabilities = capabilities(for: scanner)
+        }
+        guard let currentCapabilities else {
+            throw TWAINError.notConnected
+        }
+        return currentCapabilities
+    }
+
     func setBrightness(_ value: Double) async throws {
-        guard isNativeTWAINAvailable else {
-            throw TWAINError.nativeBridgeNotAvailable
-        }
-
-        // TODO: Call TWAIN CAP_BRIGHTNESS
-        throw TWAINError.notImplemented
+        activeSettings.brightness = clampSignedPercentage(value)
     }
 
-    /// Configure scanner contrast
     func setContrast(_ value: Double) async throws {
-        guard isNativeTWAINAvailable else {
-            throw TWAINError.nativeBridgeNotAvailable
-        }
-
-        // TODO: Call TWAIN CAP_CONTRAST
-        throw TWAINError.notImplemented
+        activeSettings.contrast = clampSignedPercentage(value)
     }
 
-    /// Configure exposure
     func setExposure(_ value: Double) async throws {
-        guard isNativeTWAINAvailable else {
-            throw TWAINError.nativeBridgeNotAvailable
-        }
-
-        // TODO: Call TWAIN CAP_EXPOSURE
-        throw TWAINError.notImplemented
+        activeSettings.exposure = clampSignedPercentage(value)
     }
 
-    // MARK: - Native Bridge Interface (Placeholder)
+    func setThreshold(_ value: Int) async throws {
+        activeSettings.threshold = min(max(value, 0), 255)
+    }
 
-    /// This is where the native C++/Objective-C bridge would be called
-    /// Example implementation would look like:
-    ///
-    /// @objc private class func nativeTWAINDiscovery() -> [String] {
-    ///     // Call C++ TWAIN library
-    ///     return TWAINNativeBridge.discoverScanners()
-    /// }
+    func setResolution(_ value: Int) async throws {
+        try applySettingMutation { settings in
+            settings.resolution = value
+        }
+    }
 
-    // MARK: - Utility Methods
+    func setColorMode(_ value: TWAINSettings.ColorMode) async throws {
+        try applySettingMutation { settings in
+            settings.colorMode = value
+        }
+    }
 
-    /// Convert settings to TWAIN capability codes
-    private func settingsToCapabilities(_ settings: TWAINSettings) -> [String: Any] {
-        return [
-            "ICAP_XRESOLUTION": settings.resolution,
-            "ICAP_YRESOLUTION": settings.resolution,
-            "ICAP_PIXELTYPE": settings.colorMode.rawValue,
-            "CAP_FEEDERENABLED": settings.autoFeed,
-            "CAP_DUPLEXENABLED": settings.duplex,
-            "ICAP_BRIGHTNESS": settings.brightness,
-            "ICAP_CONTRAST": settings.contrast,
-            "ICAP_THRESHOLD": settings.threshold
+    func setPaperSize(_ value: TWAINSettings.PaperSize) async throws {
+        try applySettingMutation { settings in
+            settings.paperSize = value
+        }
+    }
+
+    func setSource(_ value: TWAINSettings.Source) async throws {
+        try applySettingMutation { settings in
+            settings.source = value
+        }
+    }
+
+    func setDuplexEnabled(_ enabled: Bool) async throws {
+        try applySettingMutation { settings in
+            settings.duplex = enabled
+        }
+    }
+
+    func setAutoFeedEnabled(_ enabled: Bool) async throws {
+        try applySettingMutation { settings in
+            settings.autoFeed = enabled
+        }
+    }
+
+    func updateSettings(_ settings: TWAINSettings) async throws {
+        activeSettings = try normalizedSettings(for: settings, allowDisconnectedFallback: true)
+    }
+
+    // Test-only capability override used to validate normalization paths deterministically.
+    func overrideCapabilitiesForTesting(_ capabilities: TWAINCapabilities?) {
+        capabilityOverride = capabilities
+    }
+
+    private func checkTWAINAvailability() {
+        let fm = FileManager.default
+        let candidatePaths = [
+            "/Library/Image Capture/TWAIN Data Sources",
+            "/System/Library/Image Capture/TWAIN Data Sources",
+            "/Library/Frameworks/TWAINDSM.framework",
+            "/System/Library/Frameworks/TWAIN.framework"
         ]
+        isNativeTWAINAvailable = candidatePaths.contains { fm.fileExists(atPath: $0) }
+    }
+
+    private func locateScanner(named scannerName: String) -> ICScannerDevice? {
+        scannerManager.availableScanners.first { scanner in
+            (scanner.name ?? "").localizedCaseInsensitiveCompare(scannerName) == .orderedSame
+        }
+    }
+
+    private func capabilities(for scanner: ICScannerDevice) -> TWAINCapabilities {
+        var capabilities = TWAINCapabilities()
+        let units = scanner.availableFunctionalUnitTypes
+        capabilities.supportsFlatbed = units.contains(NSNumber(value: ICScannerFunctionalUnitType.flatbed.rawValue))
+        capabilities.supportsADF = units.contains(NSNumber(value: ICScannerFunctionalUnitType.documentFeeder.rawValue))
+
+        if let feeder = scanner.selectedFunctionalUnit as? ICScannerFunctionalUnitDocumentFeeder {
+            capabilities.supportsDuplex = feeder.supportsDuplexScanning
+        } else {
+            capabilities.supportsDuplex = false
+        }
+
+        let resolutions = Array(scanner.selectedFunctionalUnit.supportedResolutions)
+        if let minResolution = resolutions.min() {
+            capabilities.minResolution = minResolution
+        }
+        if let maxResolution = resolutions.max() {
+            capabilities.maxResolution = maxResolution
+        }
+
+        capabilities.model = scanner.name ?? "Unknown"
+        capabilities.manufacturer = scanner.productKind ?? "Unknown"
+        return capabilities
+    }
+
+    private func twainPreset(for settings: TWAINSettings) -> ScanPreset {
+        var preset = ScanPreset.quickScan
+        preset.name = connectedScannerName ?? "TWAIN Scan"
+        preset.resolution = settings.resolution
+        preset.colorMode = scanColorMode(from: settings.colorMode)
+        preset.paperSize = scanPaperSize(from: settings.paperSize)
+        preset.source = scanSource(from: settings.source, duplex: settings.duplex, autoFeed: settings.autoFeed)
+        preset.useDuplex = settings.duplex
+        preset.brightness = clampNormalized(settings.brightness)
+        preset.contrast = clampNormalized(settings.contrast)
+        preset.bwThreshold = min(max(settings.threshold, 0), 255)
+        return preset
+    }
+
+    private func normalizedDefaultSettings(for capabilities: TWAINCapabilities) -> TWAINSettings {
+        var settings = TWAINSettings()
+        settings.resolution = min(max(settings.resolution, capabilities.minResolution), capabilities.maxResolution)
+        if !capabilities.supportsFlatbed, capabilities.supportsADF {
+            settings.source = .adf
+            settings.autoFeed = true
+        }
+        if !capabilities.supportsDuplex {
+            settings.duplex = false
+        }
+        return settings
+    }
+
+    private func normalizedSettings(for settings: TWAINSettings, allowDisconnectedFallback: Bool) throws -> TWAINSettings {
+        let capabilities: TWAINCapabilities
+        if let resolved = try? resolvedCapabilities() {
+            capabilities = resolved
+        } else if allowDisconnectedFallback {
+            capabilities = TWAINCapabilities()
+        } else {
+            throw TWAINError.notConnected
+        }
+        var normalized = settings
+        normalized.resolution = min(max(settings.resolution, capabilities.minResolution), capabilities.maxResolution)
+        normalized.brightness = clampSignedPercentage(settings.brightness)
+        normalized.contrast = clampSignedPercentage(settings.contrast)
+        normalized.exposure = clampSignedPercentage(settings.exposure)
+        normalized.threshold = min(max(settings.threshold, 0), 255)
+
+        if !capabilities.supportedColorModes.contains(normalized.colorMode.rawValue) {
+            throw TWAINError.capabilityNotSupported("Color mode \(normalized.colorMode.rawValue)")
+        }
+
+        if normalized.paperSize != .custom && !capabilities.supportedPaperSizes.contains(normalized.paperSize.rawValue) {
+            throw TWAINError.capabilityNotSupported("Paper size \(normalized.paperSize.rawValue)")
+        }
+
+        if normalized.source == .auto {
+            if normalized.autoFeed && capabilities.supportsADF {
+                normalized.source = .adf
+            } else if capabilities.supportsFlatbed {
+                normalized.source = .flatbed
+            } else if capabilities.supportsADF {
+                normalized.source = .adf
+            } else {
+                throw TWAINError.capabilityNotSupported("Any scan source")
+            }
+        }
+
+        if normalized.source == .flatbed {
+            if !capabilities.supportsFlatbed {
+                throw TWAINError.capabilityNotSupported("Flatbed source")
+            }
+            normalized.autoFeed = false
+            normalized.duplex = false
+        } else if normalized.source == .adf {
+            if !capabilities.supportsADF {
+                throw TWAINError.capabilityNotSupported("ADF source")
+            }
+            normalized.autoFeed = true
+        }
+
+        if normalized.duplex && !capabilities.supportsDuplex {
+            throw TWAINError.capabilityNotSupported("Duplex scanning")
+        }
+        return normalized
+    }
+
+    private func applySettingMutation(_ mutation: (inout TWAINSettings) -> Void) throws {
+        var settings = activeSettings
+        mutation(&settings)
+        activeSettings = try normalizedSettings(for: settings, allowDisconnectedFallback: true)
+    }
+
+    private func resolvedCapabilities() throws -> TWAINCapabilities {
+        if let capabilityOverride {
+            return capabilityOverride
+        }
+        if let caps = currentCapabilities {
+            return caps
+        }
+        if let scanner = scannerManager.selectedScanner {
+            let caps = capabilities(for: scanner)
+            currentCapabilities = caps
+            return caps
+        }
+        if scannerManager.useMockScanner {
+            return TWAINCapabilities(
+                supportsDuplex: true,
+                supportsADF: true,
+                supportsFlatbed: true,
+                maxResolution: 1200,
+                minResolution: 75,
+                supportedColorModes: ["Color", "Grayscale", "BlackWhite"],
+                supportedPaperSizes: ["Letter", "Legal", "A4", "A5"],
+                model: scannerManager.mockScannerName,
+                manufacturer: "Mock"
+            )
+        }
+        throw TWAINError.notConnected
+    }
+
+    private func scanColorMode(from colorMode: TWAINSettings.ColorMode) -> ColorMode {
+        switch colorMode {
+        case .color: return .color
+        case .grayscale: return .grayscale
+        case .blackWhite: return .blackWhite
+        }
+    }
+
+    private func scanPaperSize(from paperSize: TWAINSettings.PaperSize) -> ScanPaperSize {
+        switch paperSize {
+        case .letter: return .letter
+        case .legal: return .legal
+        case .a4: return .a4
+        case .a5: return .a5
+        case .custom: return .custom
+        }
+    }
+
+    private func scanSource(from source: TWAINSettings.Source, duplex: Bool, autoFeed: Bool) -> ScanSource {
+        switch source {
+        case .flatbed:
+            return .flatbed
+        case .adf:
+            return duplex ? .adfDuplex : .adfFront
+        case .auto:
+            if autoFeed, let caps = currentCapabilities, caps.supportsADF {
+                return duplex ? .adfDuplex : .adfFront
+            }
+            return .flatbed
+        }
+    }
+
+    private func clampSignedPercentage(_ value: Double) -> Double {
+        min(max(value, -100), 100)
+    }
+
+    private func clampNormalized(_ value: Double) -> Double {
+        let normalized = value / 100.0
+        return min(max(normalized, -1.0), 1.0)
     }
 }
 
-// MARK: - TWAIN Errors
-
 enum TWAINError: LocalizedError {
     case nativeBridgeNotAvailable
-    case notImplemented
     case notConnected
     case scannerNotFound
     case scanFailed
-    case capabilityNotSupported
+    case capabilityNotSupported(String)
 
     var errorDescription: String? {
         switch self {
         case .nativeBridgeNotAvailable:
-            return "TWAIN native bridge not available. Using ImageCaptureCore fallback."
-        case .notImplemented:
-            return "TWAIN feature not yet implemented. Requires native bridge."
+            return "TWAIN native bridge not available. Falling back to ImageCaptureCore."
         case .notConnected:
-            return "Not connected to TWAIN scanner"
+            return "Not connected to a scanner"
         case .scannerNotFound:
-            return "TWAIN scanner not found"
+            return "Scanner not found"
         case .scanFailed:
-            return "TWAIN scan operation failed"
-        case .capabilityNotSupported:
-            return "Scanner does not support this capability"
+            return "Scan operation failed"
+        case .capabilityNotSupported(let capability):
+            return "Scanner does not support this capability: \(capability)"
         }
     }
-}
-
-// MARK: - TWAIN Native Bridge Protocol
-
-/// Protocol that a native C++/Objective-C TWAIN bridge must implement
-/// This defines the interface for future native implementation
-@objc protocol TWAINNativeBridgeProtocol {
-    /// Initialize TWAIN Data Source Manager
-    @objc func initializeTWAIN() -> Bool
-
-    /// Discover available TWAIN scanners
-    @objc func discoverScanners() -> [String]
-
-    /// Connect to specific scanner
-    @objc func connectToScanner(_ name: String) -> Bool
-
-    /// Disconnect from scanner
-    @objc func disconnect()
-
-    /// Get scanner capabilities
-    @objc func getCapabilities() -> [String: Any]
-
-    /// Set capability value
-    @objc func setCapability(_ capability: String, value: Any) -> Bool
-
-    /// Perform scan
-    @objc func performScan() -> [Any]?  // Returns image data
-
-    /// Cleanup
-    @objc func cleanup()
-}
-
-// MARK: - TWAIN Constants
-
-/// TWAIN capability constants (for reference)
-/// Based on TWAIN specification 2.4
-enum TWAINCapability: String {
-    // Image Information
-    case xResolution = "ICAP_XRESOLUTION"
-    case yResolution = "ICAP_YRESOLUTION"
-    case pixelType = "ICAP_PIXELTYPE"
-    case bitDepth = "ICAP_BITDEPTH"
-
-    // Document Handling
-    case feederEnabled = "CAP_FEEDERENABLED"
-    case duplexEnabled = "CAP_DUPLEXENABLED"
-    case autoFeed = "CAP_AUTOFEED"
-    case paperDetectable = "CAP_PAPERDETECTABLE"
-
-    // Image Enhancement
-    case brightness = "ICAP_BRIGHTNESS"
-    case contrast = "ICAP_CONTRAST"
-    case exposure = "ICAP_EXPOSURE"
-    case threshold = "ICAP_THRESHOLD"
-
-    // Scanner Control
-    case indicators = "CAP_INDICATORS"
-    case language = "CAP_LANGUAGE"
-    case deviceOnline = "CAP_DEVICEONLINE"
 }
 
 #endif

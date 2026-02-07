@@ -12,6 +12,7 @@ private let logger = Logger(subsystem: "com.scanflow.app", category: "ScannerSta
 
 struct ScannerStatusView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         #if os(macOS)
@@ -28,7 +29,10 @@ struct ScannerStatusView: View {
                                 .fill(statusColor.opacity(0.3))
                                 .frame(width: 16, height: 16)
                                 .scaleEffect(pulseAnimation ? 1.5 : 1.0)
-                                .animation(.easeInOut(duration: 1.0).repeatForever(), value: pulseAnimation)
+                                .animation(
+                                    reduceMotion ? nil : .easeInOut(duration: 1.0).repeatForever(),
+                                    value: pulseAnimation
+                                )
                         }
                     }
 
@@ -61,8 +65,11 @@ struct ScannerStatusView: View {
         }
         .buttonStyle(.plain)
         .onAppear {
-            pulseAnimation = true
+            pulseAnimation = !reduceMotion
         }
+        .accessibilityLabel("Scanner Status")
+        .accessibilityValue(statusText)
+        .accessibilityHint("Opens scanner selection")
         #else
         HStack(spacing: 8) {
             Circle()
@@ -76,6 +83,8 @@ struct ScannerStatusView: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
         .background(iOSGlassBackground)
+        .accessibilityLabel("Scanner Status")
+        .accessibilityValue(statusText)
         #endif
     }
 
@@ -115,7 +124,7 @@ private struct GlassBadgeStyle: ViewModifier {
     let cornerRadius: CGFloat
 
     func body(content: Content) -> some View {
-        if #available(macOS 26.0, *) {
+        if #available(iOS 26.0, macOS 26.0, *) {
             content
                 .glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
         } else {
@@ -124,4 +133,3 @@ private struct GlassBadgeStyle: ViewModifier {
         }
     }
 }
-

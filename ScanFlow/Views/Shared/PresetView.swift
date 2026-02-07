@@ -17,47 +17,21 @@ struct PresetView: View {
     var body: some View {
         @Bindable var appState = appState
 
-        HSplitView {
-            // Preset List
+        Group {
+            #if os(macOS)
+            HSplitView {
+                presetList
+                    .frame(minWidth: 250, maxWidth: 350)
+                presetDetail
+            }
+            #else
             VStack(spacing: 0) {
-                HStack {
-                    Text("Presets")
-                        .font(.headline)
-
-                    Spacer()
-
-                    Button {
-                        createNewPreset()
-                    } label: {
-                        Image(systemName: "plus")
-                    }
-                    .buttonStyle(.borderless)
-                }
-                .padding(12)
-                .modifier(GlassHeaderStyle(cornerRadius: 14))
-                .padding(.horizontal, 12)
-                .padding(.top, 12)
-
-                List(appState.presets, selection: $selectedPreset) { preset in
-                    PresetListItem(preset: preset, isSelected: preset.id == selectedPreset)
-                        .tag(preset.id)
-                        .listRowBackground(Color.clear)
-                }
-                .listStyle(.sidebar)
-                .padding(.horizontal, 6)
+                presetList
+                    .frame(maxHeight: 300)
+                Divider()
+                presetDetail
             }
-            .frame(minWidth: 250, maxWidth: 350)
-
-            // Preset Detail
-            if let preset = appState.presets.first(where: { $0.id == selectedPreset }) {
-                PresetDetailView(preset: binding(for: preset))
-            } else {
-                ContentUnavailableView {
-                    Label("No Preset Selected", systemImage: "slider.horizontal.3")
-                } description: {
-                    Text("Select a preset to view details")
-                }
-            }
+            #endif
         }
         .onAppear {
             // Auto-select the current preset when view appears
@@ -79,6 +53,49 @@ struct PresetView: View {
             get: { appState.presets[index] },
             set: { appState.presets[index] = $0 }
         )
+    }
+
+    private var presetList: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text("Presets")
+                    .font(.headline)
+
+                Spacer()
+
+                Button {
+                    createNewPreset()
+                } label: {
+                    Image(systemName: "plus")
+                }
+                .buttonStyle(.borderless)
+            }
+            .padding(12)
+            .modifier(GlassHeaderStyle(cornerRadius: 14))
+            .padding(.horizontal, 12)
+            .padding(.top, 12)
+
+            List(appState.presets, selection: $selectedPreset) { preset in
+                PresetListItem(preset: preset, isSelected: preset.id == selectedPreset)
+                    .tag(preset.id)
+                    .listRowBackground(Color.clear)
+            }
+            .listStyle(.sidebar)
+            .padding(.horizontal, 6)
+        }
+    }
+
+    @ViewBuilder
+    private var presetDetail: some View {
+        if let preset = appState.presets.first(where: { $0.id == selectedPreset }) {
+            PresetDetailView(preset: binding(for: preset))
+        } else {
+            ContentUnavailableView {
+                Label("No Preset Selected", systemImage: "slider.horizontal.3")
+            } description: {
+                Text("Select a preset to view details")
+            }
+        }
     }
 
     private func createNewPreset() {
@@ -198,7 +215,7 @@ private struct GlassHeaderStyle: ViewModifier {
     let cornerRadius: CGFloat
 
     func body(content: Content) -> some View {
-        if #available(macOS 26.0, *) {
+        if #available(iOS 26.0, macOS 26.0, *) {
             content
                 .padding(.vertical, 8)
                 .padding(.horizontal, 12)
@@ -222,7 +239,7 @@ private struct GlassCardStyle: ViewModifier {
     let isSelected: Bool
 
     func body(content: Content) -> some View {
-        if #available(macOS 26.0, *) {
+        if #available(iOS 26.0, macOS 26.0, *) {
             content
                 .glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
                 .overlay(
@@ -245,7 +262,7 @@ private struct GlassPanelStyle: ViewModifier {
     let cornerRadius: CGFloat
 
     func body(content: Content) -> some View {
-        if #available(macOS 26.0, *) {
+        if #available(iOS 26.0, macOS 26.0, *) {
             content
                 .glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
                 .overlay(

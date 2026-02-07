@@ -41,7 +41,7 @@ public enum ConnectionState: Equatable {
     }
 }
 
-public struct ScanResult {
+struct ScanResult {
     #if os(macOS)
     let images: [NSImage]  // Multiple pages for ADF scanning
     var image: NSImage { images.first ?? NSImage() }  // Backwards compatible
@@ -51,9 +51,20 @@ public struct ScanResult {
     let metadata: ScanMetadata
 }
 
+@MainActor
+protocol ScanExecuting: AnyObject {
+    func scan(with preset: ScanPreset) async throws -> ScanResult
+}
+
 @Observable
 @MainActor
 public class ScannerManager: NSObject {
+    // Runtime-tunable values surfaced in Advanced settings.
+    var discoveryTimeoutSeconds: Int = 3
+    var scanTimeoutSeconds: Int = 300
+    var preserveTemporaryScanFiles: Bool = false
+    var maxBufferedPages: Int = 200
+
     #if os(macOS)
     public var availableScanners: [ICScannerDevice] = []
     public var selectedScanner: ICScannerDevice?
@@ -63,7 +74,7 @@ public class ScannerManager: NSObject {
     public var connectionState: ConnectionState = .disconnected
     public var lastError: String?
     public var isScanning: Bool = false
-    public var availableSources: [ScanSource] = ScanSource.allCases // Default to all, updated when connected
+    var availableSources: [ScanSource] = ScanSource.allCases // Default to all, updated when connected
     #if os(macOS)
     var onDeviceReady: ((ICDevice?) -> Void)?
     var onScannerDiscovered: ((ICScannerDevice) -> Void)?
@@ -79,6 +90,12 @@ public class ScannerManager: NSObject {
         setupDeviceBrowser()
         #endif
     }
+
+    #if os(macOS)
+    var temporaryScanDirectoryURL: URL {
+        FileManager.default.temporaryDirectory.appendingPathComponent("ScanFlow", isDirectory: true)
+    }
+    #endif
 
     #if os(macOS)
     private func setupDeviceBrowser() {
@@ -133,8 +150,9 @@ public class ScannerManager: NSObject {
         }
 
         // Wait for discovery - delegates will populate the list
-        logger.debug("Waiting 3 seconds for scanner discovery")
-        try? await Task.sleep(for: .seconds(3))
+        let timeout = max(1, discoveryTimeoutSeconds)
+        logger.debug("Waiting \(timeout) seconds for scanner discovery")
+        try? await Task.sleep(for: .seconds(timeout))
 
         // Log results
         logger.info("Discovery complete. Found \(self.availableScanners.count) scanner(s)")
@@ -241,7 +259,7 @@ public class ScannerManager: NSObject {
         throw lastError ?? ScannerError.connectionFailed
     }
 
-    public func connectMockScanner() async {
+    func connectMockScanner() async {
         logger.info("Connecting to mock scanner...")
         connectionState = .connecting
         try? await Task.sleep(for: .seconds(1))
@@ -251,7 +269,7 @@ public class ScannerManager: NSObject {
     }
 
     /// The preferred source to default to when connecting (flatbed if available)
-    public var preferredDefaultSource: ScanSource {
+    var preferredDefaultSource: ScanSource {
         if availableSources.contains(.flatbed) {
             return .flatbed
         }
@@ -307,7 +325,7 @@ public class ScannerManager: NSObject {
         connectionState = .disconnected
     }
 
-    public func scan(with preset: ScanPreset) async throws -> ScanResult {
+    func scan(with preset: ScanPreset) async throws -> ScanResult {
         logger.info("Starting scan with preset: \(preset.name)")
 
         guard connectionState.isConnected || useMockScanner else {
@@ -365,7 +383,7 @@ public class ScannerManager: NSObject {
         logger.debug("Transfer mode set to file-based")
 
         // Set downloads directory
-        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent("ScanFlow", isDirectory: true)
+        let tempDir = temporaryScanDirectoryURL
         do {
             try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
         } catch {
@@ -447,6 +465,7 @@ public class ScannerManager: NSObject {
         scannedPages = []
 
         // Perform the scan with timeout
+        let timeoutSeconds = max(30, scanTimeoutSeconds)
         return try await withThrowingTaskGroup(of: ScanResult.self) { group in
             group.addTask {
                 try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<ScanResult, Error>) in
@@ -459,8 +478,7 @@ public class ScannerManager: NSObject {
             }
 
             group.addTask {
-                // Timeout after 300 seconds for multi-page (ADF can have many pages)
-                try await Task.sleep(for: .seconds(300))
+                try await Task.sleep(for: .seconds(timeoutSeconds))
                 throw ScannerError.scanTimeout
             }
 
@@ -654,7 +672,7 @@ public class ScannerManager: NSObject {
         connectionState = .error("Scanner discovery not supported on iOS")
     }
 
-    public func connectMockScanner() async {
+    func connectMockScanner() async {
         connectionState = .connecting
         try? await Task.sleep(for: .seconds(1))
         connectionState = .connected
@@ -663,8 +681,23 @@ public class ScannerManager: NSObject {
     public func disconnect() async {
         connectionState = .disconnected
     }
+
+    var preferredDefaultSource: ScanSource {
+        if availableSources.contains(.flatbed) {
+            return .flatbed
+        }
+        return availableSources.first ?? .flatbed
+    }
+
+    func scan(with preset: ScanPreset) async throws -> ScanResult {
+        _ = preset
+        throw ScannerError.scanFailed
+    }
     #endif
 }
+
+@MainActor
+extension ScannerManager: ScanExecuting {}
 
 #if os(macOS)
 // MARK: - ICDeviceBrowserDelegate
@@ -801,10 +834,22 @@ extension ScannerManager: ICScannerDeviceDelegate {
 
             // For multi-page scanning (ADF), collect pages until scan completes
             if self.isMultiPageScan {
+                if self.scannedPages.count >= self.maxBufferedPages {
+                    logger.error("Exceeded buffered page limit (\(self.maxBufferedPages)). Failing scan to prevent excessive memory use.")
+                    if let continuation = self.currentScanContinuation {
+                        self.currentScanContinuation = nil
+                        continuation.resume(throwing: ScannerError.scanFailed)
+                    }
+                    self.scannedPages = []
+                    self.isMultiPageScan = false
+                    return
+                }
                 self.scannedPages.append(image)
                 logger.debug("Page \(self.scannedPages.count) collected, waiting for more pages")
                 // Clean up temporary file
-                try? FileManager.default.removeItem(at: url)
+                if !self.preserveTemporaryScanFiles {
+                    try? FileManager.default.removeItem(at: url)
+                }
                 // Don't resume continuation yet - wait for didCompleteScanWithError
             } else {
                 // Single page scan (flatbed) - resume immediately
@@ -829,7 +874,9 @@ extension ScannerManager: ICScannerDeviceDelegate {
                 continuation.resume(returning: result)
 
                 // Clean up temporary file
-                try? FileManager.default.removeItem(at: url)
+                if !self.preserveTemporaryScanFiles {
+                    try? FileManager.default.removeItem(at: url)
+                }
             }
         }
     }
@@ -946,7 +993,7 @@ extension ICScannerDevice {
 }
 #endif
 
-public enum ScannerError: LocalizedError {
+enum ScannerError: LocalizedError {
     case notConnected
     case connectionFailed
     case scanFailed
@@ -955,7 +1002,7 @@ public enum ScannerError: LocalizedError {
     case scanTimeout
     case scanCancelled
 
-    public var errorDescription: String? {
+    var errorDescription: String? {
         switch self {
         case .notConnected: return "Scanner is not connected"
         case .connectionFailed: return "Failed to connect to scanner"

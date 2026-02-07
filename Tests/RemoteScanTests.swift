@@ -19,12 +19,14 @@ struct RemoteScanModelsTests {
         let request = RemoteScanRequest(
             presetName: "High Quality PDF",
             searchablePDF: true,
-            forceSingleDocument: true
+            forceSingleDocument: true,
+            pairingToken: "ABCD-1234"
         )
 
         #expect(request.presetName == "High Quality PDF")
         #expect(request.searchablePDF == true)
         #expect(request.forceSingleDocument == true)
+        #expect(request.pairingToken == "ABCD-1234")
     }
 
     @Test("RemoteScanRequest with nil preset name")
@@ -45,7 +47,8 @@ struct RemoteScanModelsTests {
         let request = RemoteScanRequest(
             presetName: "Test Preset",
             searchablePDF: true,
-            forceSingleDocument: false
+            forceSingleDocument: false,
+            pairingToken: "PAIR-9999"
         )
 
         let encoder = JSONEncoder()
@@ -57,6 +60,7 @@ struct RemoteScanModelsTests {
         #expect(decoded.presetName == request.presetName)
         #expect(decoded.searchablePDF == request.searchablePDF)
         #expect(decoded.forceSingleDocument == request.forceSingleDocument)
+        #expect(decoded.pairingToken == request.pairingToken)
     }
 
     // MARK: - RemoteScanResult Tests

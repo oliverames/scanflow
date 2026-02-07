@@ -29,6 +29,7 @@ struct RemoteScanPanel: View {
                     appState.remoteScanClient.startBrowsing()
                 }
                 .controlSize(.small)
+                .accessibilityLabel("Refresh Remote Scanner List")
             }
 
             if appState.remoteScanClient.availableServices.isEmpty {
@@ -42,9 +43,21 @@ struct RemoteScanPanel: View {
                     }
                 }
                 .pickerStyle(.menu)
+                .accessibilityLabel("Available Mac Scanners")
 
                 Toggle("Split documents", isOn: $splitDocuments)
                     .font(.caption)
+                    .accessibilityHint("When enabled, document separation settings are applied on Mac")
+
+                TextField("Pairing token (if required)", text: Binding(
+                    get: { appState.remoteScanClientPairingToken },
+                    set: { appState.remoteScanClientPairingToken = $0 }
+                ))
+                .textInputAutocapitalization(.never)
+                .disableAutocorrection(true)
+                .font(.caption)
+                .accessibilityLabel("Pairing Token")
+                .accessibilityHint("Enter the token from ScanFlow on Mac")
 
                 HStack {
                     Button(appState.remoteScanClient.connectionState == .connected ? "Disconnect" : "Connect") {
@@ -52,6 +65,7 @@ struct RemoteScanPanel: View {
                     }
                     .buttonStyle(.bordered)
                     .disabled(selectedServiceID == nil && appState.remoteScanClient.connectionState != .connected)
+                    .accessibilityLabel(appState.remoteScanClient.connectionState == .connected ? "Disconnect from Mac Scanner" : "Connect to Mac Scanner")
 
                     Spacer()
 
@@ -59,11 +73,14 @@ struct RemoteScanPanel: View {
                         appState.remoteScanClient.requestScan(
                             presetName: appState.currentPreset.name,
                             searchablePDF: appState.currentPreset.searchablePDF,
-                            forceSingleDocument: !splitDocuments
+                            forceSingleDocument: !splitDocuments,
+                            pairingToken: appState.remoteScanClientPairingToken
                         )
                     }
                     .buttonStyle(.borderedProminent)
                     .disabled(appState.remoteScanClient.connectionState != .connected || appState.remoteScanClient.isScanning)
+                    .accessibilityLabel("Start Remote Scan")
+                    .accessibilityHint("Triggers a scan on the connected Mac")
                 }
             }
 

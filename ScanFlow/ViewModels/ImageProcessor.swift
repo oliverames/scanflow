@@ -11,6 +11,7 @@ import Foundation
 import AppKit
 import CoreImage
 import CoreImage.CIFilterBuiltins
+import ImageIO
 import Vision
 #endif
 
@@ -18,11 +19,11 @@ import Vision
 
 /// Comprehensive image processing for scanned documents and photos
 @MainActor
-public class ImageProcessor {
+class ImageProcessor {
 
     private let context: CIContext
 
-    public init() {
+    init() {
         // Create high-quality processing context
         let options: [CIContextOption: Any] = [
             .useSoftwareRenderer: false,
@@ -41,31 +42,40 @@ public class ImageProcessor {
         }
 
         var processedImage = ciImage
+        let mediaDetection = mediaDetectionBehavior(for: preset)
 
         // 1. Auto-rotate if enabled
         if preset.autoRotate {
             processedImage = try await detectAndCorrectOrientation(processedImage)
         }
 
-        // 2. Auto-crop if enabled (includes perspective correction)
-        if preset.autoCrop {
+        // 2. Auto-crop / deskew based on preset behavior.
+        if mediaDetection.shouldAutoCrop {
             processedImage = try await detectAndCropDocument(processedImage)
-        } else if preset.deskew {
-            // Deskew only when auto-crop is off to avoid double correction
+        }
+        if mediaDetection.shouldDeskew {
             processedImage = try await detectAndCorrectSkew(processedImage)
         }
 
-        // 3. Color restoration if enabled
+        // 3. Fixed rotation from preset.
+        if preset.rotationAngle != .none {
+            processedImage = applyRotation(processedImage, angle: preset.rotationAngle)
+        }
+
+        // 4. Color restoration if enabled
         if preset.restoreColor {
             processedImage = enhanceColors(processedImage)
         }
 
-        // 4. Auto-enhancement if enabled
+        // 5. Auto-enhancement if enabled
         if preset.autoEnhance {
             processedImage = autoEnhance(processedImage)
         }
 
-        // 5. Red-eye removal if enabled
+        // 6. Preset tone controls and post-processing toggles.
+        processedImage = applyPresetAdjustments(processedImage, preset: preset)
+
+        // 7. Red-eye removal if enabled
         if preset.removeRedEye {
             processedImage = try await removeRedEyes(processedImage)
         }
@@ -361,6 +371,111 @@ public class ImageProcessor {
     }
 
     // MARK: - Utilities
+
+    private struct MediaDetectionBehavior {
+        let shouldAutoCrop: Bool
+        let shouldDeskew: Bool
+    }
+
+    private func mediaDetectionBehavior(for preset: ScanPreset) -> MediaDetectionBehavior {
+        let autoCropFromMode: Bool
+        let deskewFromMode: Bool
+
+        switch preset.mediaDetection {
+        case .none:
+            autoCropFromMode = false
+            deskewFromMode = false
+        case .autoCrop:
+            autoCropFromMode = true
+            deskewFromMode = false
+        case .deskew:
+            autoCropFromMode = false
+            deskewFromMode = true
+        case .autoCropAndDeskew:
+            autoCropFromMode = true
+            deskewFromMode = true
+        }
+
+        return MediaDetectionBehavior(
+            shouldAutoCrop: preset.autoCrop || autoCropFromMode,
+            shouldDeskew: preset.deskew || deskewFromMode
+        )
+    }
+
+    private func applyRotation(_ image: CIImage, angle: RotationAngle) -> CIImage {
+        switch angle {
+        case .none:
+            return image
+        case .rotate90:
+            return image.oriented(.right)
+        case .rotate180:
+            return image.oriented(.down)
+        case .rotate270:
+            return image.oriented(.left)
+        }
+    }
+
+    private func applyPresetAdjustments(_ image: CIImage, preset: ScanPreset) -> CIImage {
+        var adjusted = image
+
+        // Base tone controls.
+        let toneControls = CIFilter.colorControls()
+        toneControls.inputImage = adjusted
+        toneControls.brightness = Float(preset.brightness * 0.4)
+        toneControls.contrast = Float(max(0.1, 1.0 + preset.contrast))
+        if preset.colorMode == .color {
+            toneControls.saturation = Float(max(0.0, 1.0 + preset.saturation))
+        } else {
+            toneControls.saturation = 0
+        }
+        adjusted = toneControls.outputImage ?? adjusted
+
+        // Gamma defaults to 2.2 in the model, so normalize around that as "no-op".
+        let gammaPower = max(0.1, preset.gamma / 2.2)
+        if abs(gammaPower - 1.0) > 0.01 {
+            let gammaAdjust = CIFilter.gammaAdjust()
+            gammaAdjust.inputImage = adjusted
+            gammaAdjust.power = Float(gammaPower)
+            adjusted = gammaAdjust.outputImage ?? adjusted
+        }
+
+        if abs(preset.hue) > 0.001 {
+            let hueAdjust = CIFilter.hueAdjust()
+            hueAdjust.inputImage = adjusted
+            hueAdjust.angle = Float(preset.hue * .pi)
+            adjusted = hueAdjust.outputImage ?? adjusted
+        }
+
+        if abs(preset.lightness) > 0.001 {
+            let exposure = CIFilter.exposureAdjust()
+            exposure.inputImage = adjusted
+            exposure.ev = Float(preset.lightness)
+            adjusted = exposure.outputImage ?? adjusted
+        }
+
+        if preset.descreen {
+            let noiseReduction = CIFilter.noiseReduction()
+            noiseReduction.inputImage = adjusted
+            noiseReduction.noiseLevel = 0.02
+            noiseReduction.sharpness = 0.4
+            adjusted = noiseReduction.outputImage ?? adjusted
+        }
+
+        if preset.sharpen {
+            let sharpen = CIFilter.sharpenLuminance()
+            sharpen.inputImage = adjusted
+            sharpen.sharpness = 0.4
+            adjusted = sharpen.outputImage ?? adjusted
+        }
+
+        if preset.invertColors {
+            let invert = CIFilter.colorInvert()
+            invert.inputImage = adjusted
+            adjusted = invert.outputImage ?? adjusted
+        }
+
+        return adjusted
+    }
 
     /// Render CIImage to NSImage
     private func renderImage(_ ciImage: CIImage) throws -> NSImage {

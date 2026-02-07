@@ -1,0 +1,63 @@
+name: Release macOS
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version (example: 1.2.3)"
+        required: true
+        type: string
+
+jobs:
+  release:
+    runs-on: macos-14
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ inputs.version }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+      # Optional: provide full generate_appcast command customized for your hosting.
+      SPARKLE_APPCAST_COMMAND: ${{ secrets.SPARKLE_APPCAST_COMMAND }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Build, notarize, staple, and package
+        run: ./scripts/release-macos.sh
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: scanflow-release-${{ inputs.version }}
+          path: dist/release/${{ inputs.version }}
+
+      - name: Collect release files
+        id: collect_files
+        shell: bash
+        run: |
+          files="dist/release/${{ inputs.version }}/*.zip"
+          appcast="dist/release/${{ inputs.version }}/appcast.xml"
+          if [[ -f "${appcast}" ]]; then
+            files="${files}"$'\n'"${appcast}"
+          fi
+          {
+            echo "files<<EOF"
+            echo "${files}"
+            echo "EOF"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ inputs.version }}
+          name: ScanFlow v${{ inputs.version }}
+          draft: false
+          prerelease: false
+          files: ${{ steps.collect_files.outputs.files }}

@@ -7,14 +7,14 @@
 
 import Foundation
 
-public enum ScanStatus: Codable, Equatable {
+enum ScanStatus: Codable, Equatable {
     case pending
     case scanning
     case processing
     case completed
     case failed(String)
 
-    public var description: String {
+    var description: String {
         switch self {
         case .pending: return "Pending"
         case .scanning: return "Scanning..."
@@ -25,16 +25,16 @@ public enum ScanStatus: Codable, Equatable {
     }
 }
 
-public struct QueuedScan: Identifiable, Codable {
-    public let id: UUID
-    public var name: String
-    public var preset: ScanPreset
-    public var status: ScanStatus
-    public var progress: Double // 0-1
-    public var estimatedFileSize: Int64?
-    public var thumbnailData: Data?
+struct QueuedScan: Identifiable, Codable {
+    let id: UUID
+    var name: String
+    var preset: ScanPreset
+    var status: ScanStatus
+    var progress: Double // 0-1
+    var estimatedFileSize: Int64?
+    var thumbnailData: Data?
 
-    public init(
+    init(
         id: UUID = UUID(),
         name: String,
         preset: ScanPreset,
