@@ -358,18 +358,29 @@ class DocumentSeparator {
     ) -> [[NSImage]] {
         var documents: [[NSImage]] = []
         var currentDocument: [NSImage] = []
-        
+
         let boundaryIndices = Set(boundaries.map { $0.afterPageIndex })
         let blankIndices = Set(blankPageIndices)
-        
+        var pendingBoundary = false
+
         for (index, page) in pages.enumerated() {
             // Skip blank pages if they should be removed
             if blankIndices.contains(index) {
+                if boundaryIndices.contains(index) {
+                    pendingBoundary = true
+                }
                 continue
             }
-            
+
+            if pendingBoundary {
+                if currentDocument.count >= minimumPages {
+                    documents.append(currentDocument)
+                    currentDocument = []
+                }
+                pendingBoundary = false
+            }
             currentDocument.append(page)
-            
+
             // Check if this is a boundary point
             if boundaryIndices.contains(index) && index < pages.count - 1 {
                 // Ensure minimum pages requirement

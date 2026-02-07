@@ -11,6 +11,26 @@ import Network
 @MainActor
 @Observable
 final class RemoteScanClient {
+    enum RemoteScanClientError: LocalizedError {
+        case notConnected
+        case busy
+        case timeout
+        case serverError(String)
+
+        var errorDescription: String? {
+            switch self {
+            case .notConnected:
+                return "Not connected to a ScanFlow server"
+            case .busy:
+                return "Remote scan already in progress"
+            case .timeout:
+                return "Remote scan timed out"
+            case .serverError(let message):
+                return message
+            }
+        }
+    }
+
     enum ConnectionState: String {
         case disconnected
         case connecting
@@ -31,6 +51,7 @@ final class RemoteScanClient {
     private var connection: NWConnection?
     private var buffer = Data()
     private var codec = RemoteScanCodec()
+    private var scanContinuation: CheckedContinuation<RemoteScanResult, Error>?
 
     var availableServices: [RemoteScanService] = []
     var selectedService: RemoteScanService?
@@ -89,6 +110,10 @@ final class RemoteScanClient {
         connection?.cancel()
         connection = nil
         buffer.removeAll()
+        if let continuation = scanContinuation {
+            scanContinuation = nil
+            continuation.resume(throwing: RemoteScanClientError.notConnected)
+        }
         connectionState = .disconnected
         statusMessage = nil
         isScanning = false
@@ -103,6 +128,7 @@ final class RemoteScanClient {
         pairingToken: String?
     ) {
         guard connectionState == .connected else { return }
+        if isScanning { return }
         isScanning = true
         bytesReceived = 0
         expectedBytes = nil
@@ -115,6 +141,42 @@ final class RemoteScanClient {
             pairingToken: pairingToken
         )
         send(.request(request))
+    }
+
+    func performScan(
+        presetName: String?,
+        searchablePDF: Bool,
+        forceSingleDocument: Bool,
+        pairingToken: String?,
+        timeoutSeconds: Int = 180
+    ) async throws -> RemoteScanResult {
+        guard connectionState == .connected else { throw RemoteScanClientError.notConnected }
+        guard !isScanning else { throw RemoteScanClientError.busy }
+
+        return try await withThrowingTaskGroup(of: RemoteScanResult.self) { group in
+            group.addTask { @MainActor in
+                try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<RemoteScanResult, Error>) in
+                    self.scanContinuation = continuation
+                    self.requestScan(
+                        presetName: presetName,
+                        searchablePDF: searchablePDF,
+                        forceSingleDocument: forceSingleDocument,
+                        pairingToken: pairingToken
+                    )
+                }
+            }
+
+            group.addTask {
+                try await Task.sleep(for: .seconds(max(30, timeoutSeconds)))
+                throw RemoteScanClientError.timeout
+            }
+
+            guard let result = try await group.next() else {
+                throw RemoteScanClientError.timeout
+            }
+            group.cancelAll()
+            return result
+        }
     }
 
     private func updateServices(from results: Set<NWBrowser.Result>) {
@@ -199,11 +261,20 @@ final class RemoteScanClient {
             if let result = message.result {
                 expectedBytes = result.totalBytes
                 isScanning = false
+                if let continuation = scanContinuation {
+                    scanContinuation = nil
+                    continuation.resume(returning: result)
+                }
                 onScanResult?(result)
             }
         case .error:
             isScanning = false
-            lastError = message.error?.message
+            let messageText = message.error?.message
+            lastError = messageText
+            if let continuation = scanContinuation {
+                scanContinuation = nil
+                continuation.resume(throwing: RemoteScanClientError.serverError(messageText ?? "Remote scan failed"))
+            }
         default:
             break
         }

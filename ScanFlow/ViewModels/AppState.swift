@@ -374,29 +374,76 @@ public class AppState {
         logger.info("Starting scan process with \(self.scanQueue.count) items in queue")
         isScanning = true
 
-        for index in scanQueue.indices where scanQueue[index].status == .pending {
-            logger.info("Processing queue item \(index + 1): \(self.scanQueue[index].name)")
-            scanQueue[index].status = .scanning
+        func updateQueueStatus(id: UUID, status: ScanStatus) {
+            if let currentIndex = scanQueue.firstIndex(where: { $0.id == id }) {
+                scanQueue[currentIndex].status = status
+            }
+        }
+
+        while let pending = scanQueue.first(where: { $0.status == .pending }) {
+            let scanID = pending.id
+            let preset = pending.preset
+            let scanName = pending.name
+
+            guard scanQueue.contains(where: { $0.id == scanID && $0.status == .pending }) else {
+                continue
+            }
+
+            #if os(macOS)
+            if !confirmScanIfNeeded(preset) {
+                updateQueueStatus(id: scanID, status: .failed("Cancelled"))
+                continue
+            }
+            #endif
+
+            logger.info("Processing queue item: \(scanName)")
+            updateQueueStatus(id: scanID, status: .scanning)
 
             var attempt = 0
             let maxAttempts = 2
             while attempt <= maxAttempts {
                 do {
                     #if os(macOS)
-                    logger.info("Initiating scan with preset: \(self.scanQueue[index].preset.name), attempt \(attempt + 1)")
-                    let result = try await scanExecutor.scan(with: scanQueue[index].preset)
+                    if preset.useTimer {
+                        let delay = max(0.1, preset.timerSeconds)
+                        try? await Task.sleep(for: .seconds(delay))
+                    }
+                    logger.info("Initiating scan with preset: \(preset.name), attempt \(attempt + 1)")
+                    let result = try await scanExecutor.scan(with: preset)
                     logger.info("Scan completed, processing image...")
 
-                    scanQueue[index].status = .processing
-                    let savedFiles = try await saveScannedImage(result, preset: scanQueue[index].preset)
+                    updateQueueStatus(id: scanID, status: .processing)
+                    let savedFiles = try await saveScannedImage(result, preset: preset)
                     scannedFiles.append(contentsOf: savedFiles)
                     if let firstFile = savedFiles.first {
                         logger.info("Image saved to: \(firstFile.fileURL.path)")
                     }
 
-                    scanQueue[index].status = .completed
+                    updateQueueStatus(id: scanID, status: .completed)
                     didScanThisSession = true
-                    logger.info("Scan \(index + 1) completed successfully")
+                    logger.info("Scan completed successfully: \(scanName)")
+                    if preset.askForMorePages, preset.source == .flatbed, shouldScanAnotherPage() {
+                        addToQueue(preset: preset, count: 1)
+                    }
+                    #endif
+                    #if os(iOS)
+                    guard remoteScanClient.connectionState == .connected else {
+                        updateQueueStatus(id: scanID, status: .failed("Not connected to a Mac"))
+                        showAlert(message: "Connect to a Mac scanner before starting a remote scan.")
+                        break
+                    }
+
+                    let result = try await remoteScanClient.performScan(
+                        presetName: preset.name,
+                        searchablePDF: preset.searchablePDF,
+                        forceSingleDocument: !preset.separationSettings.enabled,
+                        pairingToken: remoteScanClientPairingToken
+                    )
+
+                    updateQueueStatus(id: scanID, status: .processing)
+                    handleRemoteScanResult(result)
+                    updateQueueStatus(id: scanID, status: .completed)
+                    didScanThisSession = true
                     #endif
                     break
                 } catch {
@@ -416,11 +463,11 @@ public class AppState {
 
                     if !isLastAttempt, shouldRetry {
                         attempt += 1
-                        scanQueue[index].status = .scanning
+                        updateQueueStatus(id: scanID, status: .scanning)
                         continue
                     }
 
-                    scanQueue[index].status = .failed(error.localizedDescription)
+                    updateQueueStatus(id: scanID, status: .failed(error.localizedDescription))
                     showAlert(message: "Scan failed: \(error.localizedDescription)")
                     break
                 }
@@ -482,7 +529,10 @@ public class AppState {
     #if os(macOS)
     private func saveScannedImage(_ result: ScanResult, preset: ScanPreset) async throws -> [ScannedFile] {
         let destPath = NSString(string: preset.destination).expandingTildeInPath
-        let destURL = URL(fileURLWithPath: destPath)
+        var destURL = URL(fileURLWithPath: destPath)
+        if let subfolder = organizationSubfolder(for: result.metadata.timestamp) {
+            destURL = destURL.appendingPathComponent(subfolder, isDirectory: true)
+        }
 
         do {
             try FileManager.default.createDirectory(at: destURL, withIntermediateDirectories: true)
@@ -499,6 +549,17 @@ public class AppState {
         var sequenceCounter = preset.useSequenceNumber ? preset.sequenceStartNumber : 0
 
         func fallbackBaseName() -> String {
+            let trimmedTemplate = fileNamingTemplate.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmedTemplate.isEmpty {
+                let baseName = baseNameFromTemplate(
+                    scanDate: result.metadata.timestamp,
+                    sequenceNumber: sequenceCounter
+                )
+                if trimmedTemplate.contains("###") {
+                    sequenceCounter += 1
+                }
+                return baseName
+            }
             var nameParts: [String] = []
             let prefix = preset.fileNamePrefix.trimmingCharacters(in: .whitespacesAndNewlines)
             if !prefix.isEmpty {
@@ -669,6 +730,11 @@ public class AppState {
                 }
                 try finalizeFile(url: targetURL, filename: targetURL.lastPathComponent)
             }
+        }
+
+        openSavedFilesIfNeeded(savedFiles: savedFiles, preset: preset)
+        if autoOpenDestination, let folderURL = savedFiles.first?.fileURL.deletingLastPathComponent() {
+            NSWorkspace.shared.open(folderURL)
         }
 
         return savedFiles
@@ -991,6 +1057,25 @@ public class AppState {
     }
 
     #if os(macOS)
+    private func confirmScanIfNeeded(_ preset: ScanPreset) -> Bool {
+        guard preset.showConfigBeforeScan else { return true }
+        let alert = NSAlert()
+        alert.messageText = "Start Scan?"
+        alert.informativeText = "Scan using preset: \(preset.name)"
+        alert.addButton(withTitle: "Start Scan")
+        alert.addButton(withTitle: "Cancel")
+        return alert.runModal() == .alertFirstButtonReturn
+    }
+
+    private func shouldScanAnotherPage() -> Bool {
+        let alert = NSAlert()
+        alert.messageText = "Scan another page?"
+        alert.informativeText = "The scan completed. Would you like to scan another page?"
+        alert.addButton(withTitle: "Scan Another")
+        alert.addButton(withTitle: "Finish")
+        return alert.runModal() == .alertFirstButtonReturn
+    }
+
     private func promptForFilename(suggested: String, preview: NSImage, fallbackLabel: String) -> String? {
         let alert = NSAlert()
         alert.messageText = "Edit Filename"
@@ -1050,6 +1135,52 @@ public class AppState {
             return "png"
         }
     }
+
+    #if os(macOS)
+    private func organizationSubfolder(for date: Date) -> String? {
+        let formatter = DateFormatter()
+        switch organizationPattern {
+        case "date":
+            formatter.dateFormat = "yyyy-MM-dd"
+        case "month":
+            formatter.dateFormat = "yyyy-MM"
+        default:
+            return nil
+        }
+        return formatter.string(from: date)
+    }
+
+    private func baseNameFromTemplate(scanDate: Date, sequenceNumber: Int) -> String {
+        let formatter = DateFormatter()
+        let sequence = String(format: "%03d", sequenceNumber)
+        formatter.dateFormat = fileNamingTemplate.replacingOccurrences(of: "###", with: sequence)
+        return formatter.string(from: scanDate)
+    }
+
+    private func openSavedFilesIfNeeded(savedFiles: [ScannedFile], preset: ScanPreset) {
+        guard preset.openWithApp else { return }
+        let appPath = preset.openWithAppPath.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !appPath.isEmpty else { return }
+        let appURL = URL(fileURLWithPath: appPath)
+        guard FileManager.default.fileExists(atPath: appURL.path) else {
+            showAlert(message: "Open-with app not found at \(appURL.path)")
+            return
+        }
+
+        let fileURLs = savedFiles.map(\.fileURL)
+        guard !fileURLs.isEmpty else { return }
+        NSWorkspace.shared.open(
+            fileURLs,
+            withApplicationAt: appURL,
+            configuration: NSWorkspace.OpenConfiguration(),
+            completionHandler: { _, error in
+                if let error {
+                    logger.error("Failed to open files: \(error.localizedDescription)")
+                }
+            }
+        )
+    }
+    #endif
 
     private func dateTagString() -> String {
         let dateFormatter = DateFormatter()
@@ -1390,7 +1521,7 @@ public class AppState {
 
 #if os(macOS)
     private func handleScannerReadyForAutoScan(device: ICDevice?) {
-        guard keepConnectedInBackground, autoStartScanWhenReady else { return }
+        guard keepConnectedInBackground, autoStartScanWhenReady, currentPreset.scanOnDocumentPlacement else { return }
         guard !isScanning else { return }
 
         if let scanner = device as? ICScannerDevice {
